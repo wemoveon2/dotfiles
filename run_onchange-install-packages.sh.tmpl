@@ -2,25 +2,31 @@
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
 # install zsh and ohmyzsh + p10k
-sudo apt install zsh curl git
+sudo apt install zsh curl git -y
 git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 chsh -s $(which zsh)
 # docker and text editor
-sudo apt install ca-certificates gnupg
+sudo apt install ca-certificates gnupg -y
 sudo install -m 0755 -d /etc/apt/keyrings
+{{   if eq .chezmoi.osRelease.id "ubuntu" -}}
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 echo \
-
   "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+{{   else if eq .chezmoi.osRelease.id "debian" }}
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+{{   end }}
 sudo apt update
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo apt install neovim man age
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+sudo apt install neovim man age -y
 # lazygit
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
 curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
@@ -34,7 +40,7 @@ mkdir -p ~/miniconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~/miniconda3/miniconda.sh
-~/miniconda3/bin/conda init $SHELL
+~/miniconda3/bin/conda init zsh
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
 if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
@@ -42,7 +48,7 @@ if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
 fi
 # for installing brew on apple silicon
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-brew install neovim age git docker lazygit
+brew install neovim age git docker lazygit -y
 git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 # miniconda3
@@ -50,5 +56,5 @@ mkdir -p ~/miniconda3
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~miniconda3/miniconda.sh
-~/miniconda3/bin/conda init $SHELL
+~/miniconda3/bin/conda init zsh
 {{ end -}}
