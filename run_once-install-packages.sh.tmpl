@@ -1,6 +1,8 @@
 #!/bin/sh
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
+# ohmyzsh plugins
+sudo apt install fzf tmux python3-pygments -y
 # install zsh and ohmyzsh + p10k
 sudo apt install zsh curl git -y
 git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
@@ -49,6 +51,8 @@ fi
 # for installing brew on apple silicon
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 brew install neovim age git docker lazygit -y
+# ohmyzsh plugins
+brew install -y fzf tmux pygments
 git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 # miniconda3
