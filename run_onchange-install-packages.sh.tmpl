@@ -1,0 +1,15 @@
+#!/bin/sh
+{{ if eq .chezmoi.os "linux" -}}
+sudo apt update && sudo apt upgrade
+# install zsh and ohmyzsh + p10k
+sudo apt install zsh
+chsh -s zsh
+# docker and text editor
+sudo apt install ca-certificates curl gnupg neovim man age
+{{ else if eq .chezmoi.os "darwin" -}} 
+# see if homebrew is installed, install it if not
+if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+brew install neovim age
