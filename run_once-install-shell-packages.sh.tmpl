@@ -4,8 +4,7 @@ sudo apt update && sudo apt upgrade
 # ohmyzsh plugins
 sudo apt install fzf tmux python3-pygments -y
 # install zsh and ohmyzsh + p10k
-if ! command -v zsh &> /dev/null
-then
+if ! [ -x "$(command -v zsh)" ]; then
 	sudo apt install zsh curl git -y
 	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k

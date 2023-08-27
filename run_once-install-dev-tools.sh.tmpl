@@ -39,7 +39,7 @@ fi
 if ! [ -x  "$(command -v go)" ]; then
 	wget https://storage.googleapis.com/golang/$GO_VERSION.linux-amd64.tar.gz
 	rm -rf /usr/local/go && tar -C /usr/local -xzf $GO_VERSION.linux-amd64.tar.gz
-	rm go$VERSION.linux-amd64.tar.gz
+	rm $GO_VERSION.linux-amd64.tar.gz
 fi
 # rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
