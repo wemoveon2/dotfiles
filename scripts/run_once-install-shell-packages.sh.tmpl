@@ -1,0 +1,30 @@
+#!/bin/sh
+{{ if eq .chezmoi.os "linux" -}}
+sudo apt update && sudo apt upgrade
+# ohmyzsh plugins
+sudo apt install fzf tmux python3-pygments -y
+# install zsh and ohmyzsh + p10k
+sudo apt install zsh curl git -y
+git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+chsh -s $(which zsh)
+# lazygit
+LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+tar xf lazygit.tar.gz lazygit && rm lazygit.tar.gz
+sudo install lazygit /usr/local/bin
+# jump
+wget https://github.com/gsamokovarov/jump/releases/download/v0.51.0/jump_0.51.0_amd64.deb && sudo dpkg -i jump_0.51.0_amd64.deb && rm jump_0.51.0_amd64.deb
+{{ else if eq .chezmoi.os "darwin" -}} 
+# see if homebrew is installed, install it if not
+if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+fi
+brew install age git lazygit jump -y
+brew install --cask flycut -y
+# ohmyzsh, plugins, and theme
+brew install fzf tmux pygments -y
+git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
+git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+{{ end -}}

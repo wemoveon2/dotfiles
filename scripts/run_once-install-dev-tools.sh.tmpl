@@ -1,13 +1,7 @@
 #!/bin/sh
+GO_VERSION=`curl -L https://golang.org/VERSION?m=text`
 {{ if eq .chezmoi.os "linux" -}}
-sudo apt update && sudo apt upgrade
-# ohmyzsh plugins
-sudo apt install fzf tmux python3-pygments -y
-# install zsh and ohmyzsh + p10k
-sudo apt install zsh curl git -y
-git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
-chsh -s $(which zsh)
+sudo apt update 
 # docker and text editor
 sudo apt install ca-certificates gnupg -y
 sudo install -m 0755 -d /etc/apt/keyrings
@@ -29,35 +23,33 @@ echo \
 sudo apt update
 sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 sudo apt install neovim man age -y
-# lazygit
-LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-tar xf lazygit.tar.gz lazygit && rm lazygit.tar.gz
-sudo install lazygit /usr/local/bin
-# jump
-wget https://github.com/gsamokovarov/jump/releases/download/v0.51.0/jump_0.51.0_amd64.deb && sudo dpkg -i jump_0.51.0_amd64.deb && rm jump_0.51.0_amd64.deb
 # miniconda3
 mkdir -p ~/miniconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~/miniconda3/miniconda.sh
 ~/miniconda3/bin/conda init zsh
+# latest ver of go
+wget https://storage.googleapis.com/golang/$VERSION.linux-amd64.tar.gz
+tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz
+rm go$VERSION.linux-amd64.tar.gz
+# rust cargo
+curl https://sh.rustup.rs -sSf | sh
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
 if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
-# for installing brew on apple silicon
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-brew install neovim age git docker lazygit -y
-# ohmyzsh plugins
-brew install -y fzf tmux pygments
-git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
-git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+brew install docker neovim -y
 # miniconda3
 mkdir -p ~/miniconda3
 curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 rm -rf ~miniconda3/miniconda.sh
 ~/miniconda3/bin/conda init zsh
+# go
+brew install go 
+# rust cargo -y
+curl https://sh.rustup.rs -sSf | sh
 {{ end -}}
