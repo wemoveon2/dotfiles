@@ -1,40 +1,50 @@
 #!/bin/sh
-GO_VERSION=`curl -L https://golang.org/VERSION?m=text`
+GO_VERSION="$(curl -L https://golang.org/VERSION?m=text)"
+GO_VERSION=$(echo $GO_VERSION | awk 'NR==1{print $1}' | tr -d '[:space:]')
+echo "xx${GO_VERSION}xx"
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update 
 # docker and text editor
-sudo apt install ca-certificates gnupg -y
-sudo install -m 0755 -d /etc/apt/keyrings
-{{   if eq .chezmoi.osRelease.id "ubuntu" -}}
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-{{   else if eq .chezmoi.osRelease.id "debian" }}
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-{{   end }}
-sudo apt update
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+if ! [ -x "$(command -v docker)" ]; then
+	sudo apt install ca-certificates gnupg -y
+	sudo install -m 0755 -d /etc/apt/keyrings
+	{{   if eq .chezmoi.osRelease.id "ubuntu" -}}
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	sudo chmod a+r /etc/apt/keyrings/docker.gpg
+	echo \
+	  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+	  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+	  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	{{   else if eq .chezmoi.osRelease.id "debian" }}
+	curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	sudo chmod a+r /etc/apt/keyrings/docker.gpg
+	echo \
+	  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+	  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+	  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	{{   end }}
+	sudo apt update
+	sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+fi
 sudo apt install neovim man age -y
 # miniconda3
-mkdir -p ~/miniconda3
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm -rf ~/miniconda3/miniconda.sh
-~/miniconda3/bin/conda init zsh
+if ! [ -x "$(command -v conda)" ]; then
+	mkdir -p ~/miniconda3
+	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+	rm -f ~/miniconda3/miniconda.sh
+	~/miniconda3/bin/conda init zsh
+fi
 # latest ver of go
-wget https://storage.googleapis.com/golang/$VERSION.linux-amd64.tar.gz
-tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz
-rm go$VERSION.linux-amd64.tar.gz
+if ! [ -x  "$(command -v go)" ]; then
+	wget https://storage.googleapis.com/golang/$GO_VERSION.linux-amd64.tar.gz
+	rm -rf /usr/local/go && tar -C /usr/local -xzf $GO_VERSION.linux-amd64.tar.gz
+	rm go$VERSION.linux-amd64.tar.gz
+fi
 # rust cargo
-curl https://sh.rustup.rs -sSf | sh
+if ! [ -x "$(command -v cargo)" ]; then
+	curl https://sh.rustup.rs -sSf | sh
+fi
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
 if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
@@ -43,13 +53,17 @@ if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
 fi
 brew install docker neovim -y
 # miniconda3
-mkdir -p ~/miniconda3
-curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-rm -rf ~miniconda3/miniconda.sh
-~/miniconda3/bin/conda init zsh
+if ! [ -x "$(command -v conda)" ]; then
+	mkdir -p ~/miniconda3
+	curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
+	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+	rm -rf ~miniconda3/miniconda.sh
+	~/miniconda3/bin/conda init zsh
+fi
 # go
 brew install go 
 # rust cargo -y
-curl https://sh.rustup.rs -sSf | sh
+if ! [ -x "$(command -v cargo)" ]; then
+	curl https://sh.rustup.rs -sSf | sh
+fi
 {{ end -}}
