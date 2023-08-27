@@ -22,6 +22,8 @@ alias kfp='kubectl --namespace=kubeflow'
 alias stg='kubectl --namespace=staging'
 alias processes='ps xao pid,ppid,pgid,comm,sid'
 alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
+
+alias vim='nvim'
 check() {
 	        cat $1 | tail -n $2
 }
