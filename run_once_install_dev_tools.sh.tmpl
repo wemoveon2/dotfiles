@@ -62,8 +62,8 @@ if ! [ -x "$(command -v conda)" ]; then
 	~/miniconda3/bin/conda init zsh
 fi
 # go
-brew install go 
-# rust cargo -y
+brew install go  -y
+# rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
 	curl https://sh.rustup.rs -sSf | sh
 fi
