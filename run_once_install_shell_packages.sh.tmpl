@@ -32,7 +32,7 @@ brew install age git lazygit jump -y
 brew install --cask flycut -y
 # ohmyzsh, plugins, and theme
 brew install fzf tmux pygments -y
-if ! [ -x "$(command -x zsh)" ]; then
+if ! [ -x "$(command -v zsh)" ]; then
 	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 fi
