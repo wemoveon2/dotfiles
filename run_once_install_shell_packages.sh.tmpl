@@ -24,15 +24,20 @@ fi
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
 if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
+	echo "Installing homebrew"
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 brew update
-brew install age git lazygit jump -y
-brew install --cask flycut -y
+echo "Installing age, git, lazygit, and jump
+brew install age git lazygit jump 
+echo "Installing flycut"
+brew install --cask flycut 
 # ohmyzsh, plugins, and theme
-brew install fzf tmux pygments -y
+echo "Installing plugins for zsh: fzf, tmux, and pygments"
+brew install fzf tmux pygments 
 if ! [ -x "$(command -v zsh)" ]; then
+	echo "Installing ohmyzsh and p10k theme"
 	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 fi
