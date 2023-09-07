@@ -12,9 +12,9 @@ if ! [ -x "$(command -v zsh)" ]; then
 fi
 # lazygit
 if ! [ -x "$(command -v lazygit)" ]; then
-	LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+	LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^\"]*')
 	curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-	tar xf lazygit.tar.gz lazygit && rm lazygit.tar.gz
+	tar -xf lazygit.tar.gz lazygit && rm lazygit.tar.gz
 	sudo install lazygit /usr/local/bin
 fi
 # jump
@@ -23,20 +23,20 @@ if ! [ -x "$(command -v jump)" ]; then
 fi
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
-if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
+if ! [ -x "$(command -v brew)"  ]; then
 	echo "Installing homebrew"
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+	echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 brew update
-echo "Installing age, git, lazygit, and jump
+echo "Installing age, git, lazygit, and jump"
 brew install age git lazygit jump 
 echo "Installing flycut"
 brew install --cask flycut 
 # ohmyzsh, plugins, and theme
 echo "Installing plugins for zsh: fzf, tmux, and pygments"
 brew install fzf tmux pygments 
-if ! [ -x "$(command -v zsh)" ]; then
+if  [[ ! -x "$(command -v zsh)"  ||  ! -d "$HOME/.oh-my-zsh" ]]; then
 	echo "Installing ohmyzsh and p10k theme"
 	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k

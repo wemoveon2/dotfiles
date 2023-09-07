@@ -47,7 +47,7 @@ if ! [ -x "$(command -v cargo)" ]; then
 fi
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
-if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
+if ! [ -x "$(command -v brew)"  ]; then
 	echo "Installing homebrew"
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
