@@ -27,6 +27,7 @@ if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
+brew update
 brew install age git lazygit jump -y
 brew install --cask flycut -y
 # ohmyzsh, plugins, and theme

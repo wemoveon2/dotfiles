@@ -51,6 +51,7 @@ if ! brew_loc="$(type -p "$brew")" || [[ -z $brew_loc ]]; then
 	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
+brew update
 brew install docker neovim -y
 # miniconda3
 if ! [ -x "$(command -v conda)" ]; then
