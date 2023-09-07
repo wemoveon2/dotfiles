@@ -32,3 +32,14 @@ get_go_pod() {
 	t get po --no-headers -o custom-columns=":metadata.name" | grep go | head -n 1
 }
 
+search_files() {
+        if [ -z "$1" ]; then
+                echo "Usage: search_files <regexp> <find regex>"
+                return 1
+        fi
+        # IFS=$'\n'
+        for f in $(find . -maxdepth 1 -type f -regex "$2"); do
+                echo "Searching $f"
+                cat $f | grep --color -n "$1";
+        done
+}
