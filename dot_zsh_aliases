@@ -24,6 +24,9 @@ alias processes='ps xao pid,ppid,pgid,comm,sid'
 alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
 
 alias vim='nvim'
+alias cat='ccat'
+alias ls='ls'
+
 check() {
 	        cat $1 | tail -n $2
 }
