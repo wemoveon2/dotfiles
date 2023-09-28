@@ -22,6 +22,8 @@ alias kfp='kubectl --namespace=kubeflow'
 alias stg='kubectl --namespace=staging'
 alias processes='ps xao pid,ppid,pgid,comm,sid'
 alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
+alias q8='sdm ssh alanyu#q8'
+alias q7='sdm ssh alanyu#q7'
 
 alias vim='nvim'
 alias cat='ccat'
