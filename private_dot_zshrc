@@ -30,7 +30,7 @@ source $ZSH/oh-my-zsh.sh
 POWERLEVEL10K_SHORTEN_DIR_LENGTH=2
 
 export PATH=/home/alan/.local/bin:$PATH
-export GOROOT='/usr/lib/go-1.20'
+export GOROOT=/opt/homebrew/Cellar/go/1.21.1/libexec
 export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:$GOROOT/bin
 export PATH=$PATH:/usr/local/go/bin
@@ -57,3 +57,7 @@ if [ -f ~/.zsh_aliases ]; then
 	source ~/.zsh_aliases 
 fi
 
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+export PATH=$PATH:"~/.pyenv"
