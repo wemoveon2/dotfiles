@@ -29,6 +29,8 @@ alias vim='nvim'
 alias cat='ccat'
 alias ls='ls'
 
+alias caff='caffeinate -d -i -m'
+
 check() {
 	        cat $1 | tail -n $2
 }
