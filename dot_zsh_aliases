@@ -22,7 +22,7 @@ alias ls='ls'
 alias lg='lazygit'
 alias caff='caffeinate -d -i -m'
 # misc 
-alias sbrc='source $HOME/.bashrc'
+alias sbrc='source $HOME/.bashrc && source $HOME/.zshrc'
 alias processes='ps xao pid,ppid,pgid,comm,sid'
 alias ..='cd ..'
 alias ...='cd ../..'
