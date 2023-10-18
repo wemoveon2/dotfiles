@@ -1,0 +1,20 @@
+
+# cat arg 1 taking arg 2 lines from the end
+check() {
+	        cat $1 | tail -n $2
+}
+# work related function for getting the k8s go api pod.
+get_go_pod() {
+	t get po --no-headers -o custom-columns=":metadata.name" | grep go | head -n 1
+}
+# grep for arg 1 in files with names matching arg 2 
+search_files() {
+        if [ -z "$1" ]; then
+                echo "Usage: search_files <regexp> <find regex>"
+                return 1
+        fi
+        for f in $(find . -maxdepth 1 -type f -regex "$2"); do
+                echo "Searching $f"
+                cat $f | grep --color -n "$1";
+        done
+}
