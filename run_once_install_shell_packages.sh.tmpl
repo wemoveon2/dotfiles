@@ -1,25 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
-# ohmyzsh plugins
 sudo apt install fzf tmux -y
 # install zsh and ohmyzsh + p10k
-if ! [ -x "$(command -v zsh)" ]; then
+if ! [[ -x "$(command -v zsh)" ]]; then
 	sudo apt install zsh curl git -y
-	chsh -s $(which zsh)
 fi
-ZIM_HOME="~/.zim"
-# Download zimfw plugin manager if missing.
-if [ ! -e ${ZIM_HOME}/zimfw.zsh ]; then
-  curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
-      https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+if [[ "$SHELL" != "$(which zsh)" ]]; then
+	sudo chsh -s "$(which zsh)"
 fi
-# Install missing modules, and update ${ZIM_HOME}/init.zsh if missing or outdated.
-if [ ! ${ZIM_HOME}/init.zsh -nt ${ZDOTDIR:-${HOME}}/.zimrc ]; then
-  source ${ZIM_HOME}/zimfw.zsh init -q
-fi
-source ${ZIM_HOME}/init.zsh
-
 # lazygit
 if ! [ -x "$(command -v lazygit)" ]; then
 	LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^\"]*')
@@ -29,7 +18,7 @@ if ! [ -x "$(command -v lazygit)" ]; then
 fi
 # jump
 if ! [ -x "$(command -v jump)" ]; then
-	wget https://github.com/gsamokovarov/jump/releases/download/v0.51.0/jump_0.51.0_amd64.deb && sudo dpkg -i jump_0.51.0_amd64.deb && rm jump_0.51.0_amd64.deb
+	curl -Lo jump_0.51.0_amd64.deb https://github.com/gsamokovarov/jump/releases/download/v0.51.0/jump_0.51.0_amd64.deb && sudo dpkg -i jump_0.51.0_amd64.deb && rm jump_0.51.0_amd64.deb
 fi
 {{ else if eq .chezmoi.os "darwin" -}} 
 # see if homebrew is installed, install it if not
