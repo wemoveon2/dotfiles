@@ -2,14 +2,24 @@
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
 # ohmyzsh plugins
-sudo apt install fzf tmux python3-pygments -y
+sudo apt install fzf tmux -y
 # install zsh and ohmyzsh + p10k
 if ! [ -x "$(command -v zsh)" ]; then
 	sudo apt install zsh curl git -y
-	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
-	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 	chsh -s $(which zsh)
 fi
+ZIM_HOME="~/.zim"
+# Download zimfw plugin manager if missing.
+if [ ! -e ${ZIM_HOME}/zimfw.zsh ]; then
+  curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
+      https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+fi
+# Install missing modules, and update ${ZIM_HOME}/init.zsh if missing or outdated.
+if [ ! ${ZIM_HOME}/init.zsh -nt ${ZDOTDIR:-${HOME}}/.zimrc ]; then
+  source ${ZIM_HOME}/zimfw.zsh init -q
+fi
+source ${ZIM_HOME}/init.zsh
+
 # lazygit
 if ! [ -x "$(command -v lazygit)" ]; then
 	LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^\"]*')
@@ -33,12 +43,16 @@ echo "Installing age, git, lazygit, and jump"
 brew install age git lazygit jump 
 echo "Installing flycut"
 brew install --cask flycut 
-# ohmyzsh, plugins, and theme
-echo "Installing plugins for zsh: fzf, tmux, and pygments"
-brew install fzf tmux pygments 
-if  [[ ! -x "$(command -v zsh)"  ||  ! -d "$HOME/.oh-my-zsh" ]]; then
-	echo "Installing ohmyzsh and p10k theme"
-	git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
-	git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
+ZIM_HOME=~/.zim
+# Download zimfw plugin manager if missing.
+if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
+  curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
+      https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
 fi
+# Install missing modules, and update ${ZIM_HOME}/init.zsh if missing or outdated.
+if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZDOTDIR:-${HOME}}/.zimrc ]]; then
+
+  source ${ZIM_HOME}/zimfw.zsh init -q
+fi
+source ${ZIM_HOME}/init.zsh
 {{ end -}}

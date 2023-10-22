@@ -36,4 +36,4 @@ alias gss="git status --short"
 alias gc='git commit -m'
 # python poetry
 # export without hashes to requirements.txt
-alias per='poetry export --without-hashes --format=requirements.txt > requirements.txt'
+alias pexr='poetry export --without-hashes --format=requirements.txt > requirements.txt'
