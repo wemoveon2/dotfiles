@@ -18,7 +18,6 @@ alias q7='sdm ssh alanyu#q7'
 # tooling
 alias vim='nvim'
 alias cat='ccat'
-alias ls='ls'
 alias lg='lazygit'
 alias caff='caffeinate -d -i -m'
 # misc 
@@ -37,3 +36,5 @@ alias gc='git commit -m'
 # python poetry
 # export without hashes to requirements.txt
 alias pexr='poetry export --without-hashes --format=requirements.txt > requirements.txt'
+# exa cli tool
+alias ez="eza"
