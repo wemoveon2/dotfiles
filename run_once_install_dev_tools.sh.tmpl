@@ -30,14 +30,14 @@ sudo apt install neovim man age -y
 # miniconda3
 if ! [ -x "$(command -v conda)" ]; then
 	mkdir -p ~/miniconda3
-	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+	curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o ~/miniconda3/miniconda.sh
 	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 	rm -f ~/miniconda3/miniconda.sh
 	~/miniconda3/bin/conda init zsh
 fi
 # latest ver of go
 if ! [ -x  "$(command -v go)" ]; then
-	wget https://storage.googleapis.com/golang/$GO_VERSION.linux-amd64.tar.gz
+	curl -L https://storage.googleapis.com/golang/$GO_VERSION.linux-amd64.tar.gz -o $GO_VERSION.linux-amd64.tar.gz
 	rm -rf /usr/local/go && tar -C /usr/local -xzf $GO_VERSION.linux-amd64.tar.gz
 	rm $GO_VERSION.linux-amd64.tar.gz
 fi

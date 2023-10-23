@@ -32,7 +32,6 @@ echo "Installing age, git, lazygit, and jump"
 brew install age git lazygit jump 
 echo "Installing flycut"
 brew install --cask flycut 
-ZIM_HOME=~/.zim
 # Download zimfw plugin manager if missing.
 if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
   curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
