@@ -1,6 +1,7 @@
 #!/bin/bash
 {{ if eq .chezmoi.os "linux" -}}
-# pip3 install thefuck --user
 sudo apt install shellcheck fd-find
 ln -s $(which fdfind) ~/.local/bin/fd
 {{ end -}} 
+# restart shell
+exec $SHELL

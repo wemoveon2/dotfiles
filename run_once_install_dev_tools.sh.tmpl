@@ -1,5 +1,4 @@
 #!/bin/sh
-echo "Getting Go version"
 GO_VERSION="$(curl -L https://golang.org/VERSION?m=text)"
 GO_VERSION=$(echo $GO_VERSION | awk 'NR==1{print $1}' | tr -d '[:space:]')
 {{ if eq .chezmoi.os "linux" -}}
@@ -27,13 +26,10 @@ if ! [ -x "$(command -v docker)" ]; then
 	sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 fi
 sudo apt install neovim man age -y
-# miniconda3
-if ! [ -x "$(command -v conda)" ]; then
-	mkdir -p ~/miniconda3
-	curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o ~/miniconda3/miniconda.sh
-	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-	rm -f ~/miniconda3/miniconda.sh
-	~/miniconda3/bin/conda init zsh
+# pyenv + pyenv virtualenv
+if ! [ -x "$(command -v pyenv)" ]; then
+	curl https://pyenv.run | bash
+	git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 fi
 # latest ver of go
 if ! [ -x  "$(command -v go)" ]; then
@@ -53,25 +49,16 @@ if ! [ -x "$(command -v brew)"  ]; then
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 brew update
-echo "Installing docker"
 brew install docker 
-echo "Installing neovim"
 brew install neovim 
-# miniconda3
-if ! [ -x "$(command -v conda)" ]; then
-	echo "Installing miniconda"
-	mkdir -p ~/miniconda3
-	curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -o ~/miniconda3/miniconda.sh
-	bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-	rm -rf ~miniconda3/miniconda.sh
-	~/miniconda3/bin/conda init zsh
+if ! [ -x "$(command -v pyenv)" ]; then
+	brew install pyenv
+	brew install pyenv-virtualenv
 fi
 # go
-echo "Installing go"
 brew install go 
 # rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
-	echo "Installing rust cargo"
 	curl https://sh.rustup.rs -sSf | sh
 fi
 {{ end -}}
