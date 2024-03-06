@@ -31,6 +31,8 @@ alias ls='ls'
 
 alias caff='caffeinate -d -i -m'
 
+alias prod='kubectl -n prod'
+
 check() {
 	        cat $1 | tail -n $2
 }
