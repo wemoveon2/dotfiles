@@ -36,6 +36,8 @@ export PATH=$PATH:$GOROOT/bin
 export PATH=$PATH:/usr/local/go/bin
 eval "$(jump shell)"
 
+export EDITOR="nvim"
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/root/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
