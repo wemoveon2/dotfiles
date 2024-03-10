@@ -2,13 +2,5 @@ export PATH=$PATH:$HOME/.local/bin
 export PATH=/home/alan/.local/bin:$PATH
 export PATH=$PATH:~/bin
 export ZIM_HOME=~/.zim
-# Activate jump
-eval "$(jump shell)"
 
 . "$HOME/.cargo/env"
-# Set up pyenv
-export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-export PATH=$PATH:"~/.pyenv"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
