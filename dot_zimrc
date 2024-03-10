@@ -10,4 +10,3 @@ zmodule ohmyzsh/ohmyzsh --root plugins/colored-man-pages
 zmodule ohmyzsh/ohmyzsh --root plugins/extract
 zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
 zmodule ohmyzsh/ohmyzsh --root plugins/poetry
-zmodule ohmyzsh/ohmyzsh --root plugins/shellfirm
