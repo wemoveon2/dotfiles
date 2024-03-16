@@ -33,6 +33,8 @@ alias caff='caffeinate -d -i -m'
 
 alias prod='kubectl -n prod'
 
+alias py='ipython' # need to be installed in curr env
+
 check() {
 	        cat $1 | tail -n $2
 }
