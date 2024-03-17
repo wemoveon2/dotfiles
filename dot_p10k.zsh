@@ -1745,3 +1745,14 @@ typeset -g POWERLEVEL9K_CONFIG_FILE=${${(%):-%x}:a}
 
 (( ${#p10k_config_opts} )) && setopt ${p10k_config_opts[@]}
 'builtin' 'unset' 'p10k_config_opts'
+
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+ZSH_THEME="powerlevel10k/powerlevel10k"
+CASE_SENSITIVE="true"
+# HYPHEN_INSENSITIVE="true"
+COMPLETION_WAITING_DOTS="true"
+HIST_STAMPS="mm/dd/yyyy"
+POWERLEVEL10K_SHORTEN_DIR_LENGTH=2

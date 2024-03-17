@@ -1,14 +1,6 @@
-# DOTFILE_PATH=$(find ~ -type d -name ".dotfiles")
-# for DOTFILE in $(find $DOTFILE_PATH);
-# do
-#   if [[ $DOTFILE == .* ]] && [[ -f $DOTFILE ]]; 
-#     then source "$DOTFILE"; 
-#   fi
-# done
-
 export PATH=$PATH:$HOME/.local/bin
-
-# Activate jump
-eval "$(jump shell)"
+export PATH=/home/alan/.local/bin:$PATH
+export PATH=$PATH:~/bin
+export ZIM_HOME=~/.zim
 
 . "$HOME/.cargo/env"

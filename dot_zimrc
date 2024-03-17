@@ -1,0 +1,12 @@
+zmodule zsh-users/zsh-syntax-highlighting
+zmodule zsh-users/zsh-autosuggestions
+zmodule romkatv/powerlevel10k --use degit
+zmodule asciiship
+zmodule zsh-users/zsh-completions --fpath src
+zmodule completion
+
+zmodule ohmyzsh/ohmyzsh --root plugins/colorize
+zmodule ohmyzsh/ohmyzsh --root plugins/colored-man-pages
+zmodule ohmyzsh/ohmyzsh --root plugins/extract
+zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
+zmodule ohmyzsh/ohmyzsh --root plugins/poetry

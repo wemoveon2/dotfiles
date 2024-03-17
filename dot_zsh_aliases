@@ -1,3 +1,4 @@
+# work related aliases
 alias l='kubectl --context=colo --namespace=local-k8s-$USER'
 alias t='kubectl --context=colo --namespace=test-k8s-$USER'
 alias watch='watch -n .5 '
@@ -7,50 +8,33 @@ alias nukef='nuke --grace-period=0 --force'
 alias nuketf='nuket --grace-period=0 --force'
 alias run='~/work/clarifai/go/src/clarifai/scripts/k8s_run.sh'
 alias test="${CLARIFAI_ROOT}/go/src/clarifai/scripts/k8s_test.sh"
-alias sbrc="source $HOME/.bashrc"
 alias chmod-go='docker run --rm -it -v /home/alanyu/work/clarifai:/home/ubuntu/work/clarifai python:3.9.10 chmod -R 777 /home/ubuntu/work/clarifai/go/pkg/mod/'
+alias gtci='git commit -m "Trigger CI" --allow-empty'
+alias kfp='kubectl --namespace=kubeflow'
+alias stg='kubectl --namespace=staging'
+alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
+alias q8='sdm ssh alanyu#q8'
+alias q7='sdm ssh alanyu#q7'
+# tooling
+alias vim='nvim'
+alias cat='ccat'
 alias lg='lazygit'
+alias caff='caffeinate -d -i -m'
+# misc 
+alias sbrc='source $HOME/.bashrc && source $HOME/.zshrc'
+alias processes='ps xao pid,ppid,pgid,comm,sid'
+alias ..='cd ..'
+alias ...='cd ../..'
+# git specific
+alias gsw='git switch'
+alias gp='git push'
 alias gl="git log --pretty=format:'%Cred%s %h  %n%ad%d %n%an %ad%Cgreen%d' --numstat"
 # alias glo="git log --pretty=format:'%Cred%s %h  %n%ad%d %n%an %ad%n%n' --numstat --oneline"
 alias glo="git log --oneline"
 alias gss="git status --short"
 alias gc='git commit -m'
-alias gtci='git commit -m "Trigger CI" --allow-empty'
-alias gsw='git switch'
-alias gp='git push'
-alias kfp='kubectl --namespace=kubeflow'
-alias stg='kubectl --namespace=staging'
-alias processes='ps xao pid,ppid,pgid,comm,sid'
-alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
-alias q8='sdm ssh alanyu#q8'
-alias q7='sdm ssh alanyu#q7'
-
-alias vim='nvim'
-alias cat='ccat'
-alias ls='ls'
-
-alias caff='caffeinate -d -i -m'
-
-alias prod='kubectl -n prod'
-
-alias py='ipython' # need to be installed in curr env
-
-check() {
-	        cat $1 | tail -n $2
-}
-
-get_go_pod() {
-	t get po --no-headers -o custom-columns=":metadata.name" | grep go | head -n 1
-}
-
-search_files() {
-        if [ -z "$1" ]; then
-                echo "Usage: search_files <regexp> <find regex>"
-                return 1
-        fi
-        # IFS=$'\n'
-        for f in $(find . -maxdepth 1 -type f -regex "$2"); do
-                echo "Searching $f"
-                cat $f | grep --color -n "$1";
-        done
-}
+# python poetry
+# export without hashes to requirements.txt
+alias pexr='poetry export --without-hashes --format=requirements.txt > requirements.txt'
+# exa cli tool
+alias ez="eza"
