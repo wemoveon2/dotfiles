@@ -15,11 +15,13 @@ alias stg='kubectl --namespace=staging'
 alias goose='$CLARIFAI_ROOT/go/src/clarifai/cli/goose/goose'
 alias q8='sdm ssh alanyu#q8'
 alias q7='sdm ssh alanyu#q7'
+alias q22='sdm ssh alanyu#q22'
 # tooling
 alias vim='nvim'
 alias cat='ccat'
 alias lg='lazygit'
 alias caff='caffeinate -d -i -m'
+alias k='kubectl'
 # misc 
 alias sbrc='source $HOME/.bashrc && source $HOME/.zshrc'
 alias processes='ps xao pid,ppid,pgid,comm,sid'
