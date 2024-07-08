@@ -1,0 +1,25 @@
+[default]
+name                    = default
+app_id                  = 
+url                     = https://clarifai.okta.com/home/amazon_aws/0oabaia0zGk6fBcey2p6/272
+username                = alan.yu@clarifai.com
+provider                = Okta
+mfa                     = Auto
+skip_verify             = false
+timeout                 = 0
+aws_urn                 = urn:amazon:webservices
+aws_session_duration    = 43200
+aws_profile             = default
+resource_id             = 
+subdomain               = 
+role_arn                = 
+region                  = 
+http_attempts_count     = 
+http_retry_delay        = 
+credentials_file        = 
+saml_cache              = false
+saml_cache_file         = 
+target_url              = 
+disable_remember_device = false
+disable_sessions        = false
+prompter                = 
