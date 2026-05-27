@@ -1,26 +1,25 @@
-# Core: shell options, completion init, terminal title, basic utilities.
+# Core: shell options, input keybindings, terminal title, basic utilities.
 zmodule environment
 zmodule input
 zmodule termtitle
 zmodule utility
 
-# Git aliases (g, ga, gst, gco, gd, gca, etc.). User aliases in ~/.zsh_aliases
-# are sourced AFTER zim and override conflicting ones (gl, gc).
-zmodule git
-
 # Prompt.
 zmodule romkatv/powerlevel10k --use degit
 
-# OMZ plugins kept (zim loads them directly).
+# OMZ plugins that don't need compdef.
 zmodule ohmyzsh/ohmyzsh --root plugins/colorize
 zmodule ohmyzsh/ohmyzsh --root plugins/colored-man-pages
 zmodule ohmyzsh/ohmyzsh --root plugins/extract
-zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
-zmodule ohmyzsh/ohmyzsh --root plugins/poetry
 
-# Completion.
+# Completion (runs compinit).
 zmodule zsh-users/zsh-completions --fpath src
 zmodule completion
+
+# OMZ plugins that use `compdef` must load AFTER completion module.
+# git plugin gives gst, gco, gd, gp, ga, gaa, ggsup, and all other OMZ aliases.
+zmodule ohmyzsh/ohmyzsh --root plugins/git
+zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
 
 # Order matters: these three must be last, in this order.
 zmodule zsh-users/zsh-syntax-highlighting
