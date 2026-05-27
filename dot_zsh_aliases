@@ -40,3 +40,8 @@ alias gc='git commit -m'
 alias pexr='poetry export --without-hashes --format=requirements.txt > requirements.txt'
 # exa cli tool
 alias ez="eza"
+
+saml2aws_login() {
+  saml2aws login; 
+  scp -r ~/.aws/credentials q8:~/.aws/credentials
+}
