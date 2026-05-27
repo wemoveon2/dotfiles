@@ -1,0 +1,11 @@
+install.sh
+
+{{- /* VS Code config: apply OS-appropriate path, ignore the other. */}}
+{{ if ne .chezmoi.os "darwin" -}}
+Library
+Library/**
+{{ end -}}
+{{ if eq .chezmoi.os "darwin" -}}
+.config/Code
+.config/Code/**
+{{ end -}}

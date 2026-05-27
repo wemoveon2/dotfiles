@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Clone LazyVim starter into ~/.config/nvim if it's missing.
+# Customizations live in ~/.config/nvim/lua/{config,plugins} and are managed by
+# that repo's own git history — chezmoi only bootstraps it.
+set -euo pipefail
+
+NVIM_CONFIG="${HOME}/.config/nvim"
+
+if [ -d "${NVIM_CONFIG}/.git" ] || [ -f "${NVIM_CONFIG}/init.lua" ]; then
+  echo "[lazyvim] ${NVIM_CONFIG} already present, skipping"
+  exit 0
+fi
+
+if ! command -v git >/dev/null 2>&1; then
+  echo "[lazyvim] git not in PATH; cannot bootstrap" >&2
+  exit 1
+fi
+
+echo "[lazyvim] cloning LazyVim/starter into ${NVIM_CONFIG}"
+git clone https://github.com/LazyVim/starter "${NVIM_CONFIG}"
+rm -rf "${NVIM_CONFIG}/.git"
+echo "[lazyvim] done. Run 'nvim' once to install plugins."

@@ -1,0 +1,176 @@
+{
+  "workbench.startupEditor": "newUntitledFile",
+  "workbench.colorCustomizations": {
+    "editorRuler.foreground": "#ff4081"
+  },
+  "workbench.editorAssociations": {
+    "*.ipynb": "jupyter-notebook"
+  },
+  "workbench.colorTheme": "Catppuccin Macchiato",
+  "workbench.iconTheme": "vscode-icons",
+
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "left"
+  },
+  "notebook.globalToolbarShowLabel": "never",
+  "notebook.output.textLineLimit": 50000,
+  "jupyter.askForKernelRestart": false,
+
+  "editor.suggestSelection": "first",
+  "editor.rulers": [72, 79, 95, 120],
+  "editor.fontSize": 12,
+  "editor.guides.bracketPairs": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.detectIndentation": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.lineNumbers": "relative",
+
+  "search.showLineNumbers": true,
+
+  "explorer.confirmDragAndDrop": false,
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  "markdown.preview.doubleClickToSwitchToEditor": false,
+  "markdown.preview.scrollEditorWithPreview": false,
+  "markdown.preview.scrollPreviewWithEditor": false,
+  "markdown.preview.markEditorSelection": false,
+
+  "remote.SSH.remotePlatform": {
+    "de-zoomc": "linux"
+  },
+  "isort.check": true,
+  "autoDocstring.includeName": true,
+  "redhat.telemetry.enabled": false,
+  "remote.downloadExtensionsLocally": true,
+
+  "[python]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "mikoz.black-py",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "modifications"
+  },
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "jupyter.widgetScriptSources": ["jsdelivr.com", "unpkg.com"],
+
+  "gopls": {
+    "ui.semanticTokens": true
+  },
+
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "python.defaultInterpreterPath": "C:\\Users\\Alan\\miniconda3\\python.exe",
+  "vs-kubernetes": {
+    "vscode-kubernetes.kubectl-path.mac": "/Users/alan/.vs-kubernetes/tools/kubectl/kubectl",
+    "vscode-kubernetes.minikube-path.mac": "/Users/alan/.vs-kubernetes/tools/minikube/darwin-arm64/minikube",
+    "vscode-kubernetes.helm-path.mac": "/Users/alan/.vs-kubernetes/tools/helm/darwin-arm64/helm",
+    "vs-kubernetes.crd-code-completion": "enabled"
+  },
+  "vsicons.dontShowNewVersionMessage": true,
+  "tabnine.experimentalAutoImports": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.definitionLinkOpensInPeek": true,
+  "[proto3]": {
+    "editor.defaultFormatter": "zxh404.vscode-proto3",
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    "**/.hg/store/**": true,
+    "**/.github/**": true
+  },
+  "explorer.confirmDelete": false,
+  "remote.SSH.connectTimeout": 30,
+  "remote.SSH.enableAgentForwarding": false,
+  "go.buildTags": "e2e,integration,slow,unit",
+  "go.terminal.activateEnvironment": false,
+  "go.formatTool": "gofmt",
+  "cSpell.userWords": [],
+  "go.useLanguageServer": true,
+  "go.installDependenciesWhenBuilding": true,
+  "go.lintOnSave": "workspace",
+  "go.lintTool": "gopls",
+  "github.copilot.advanced": {},
+  "go.toolsManagement.autoUpdate": true,
+  "terraform.codelens.referenceCount": true,
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  "yaml.maxItemsComputed": 500000,
+  "settingsSync.ignoredExtensions": [
+    "demystifying-javascript.python-extensions-pack"
+  ],
+  "workbench.tree.indent": 4,
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.shell.osx": "/bin/zsh",
+  "code-runner.executorMap": {
+    "python": "python3",
+    "go": "go run"
+  },
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false,
+    "python": false,
+    "rust": false
+  },
+  "editor.inlayHints.fontSize": 9,
+  "rust-analyzer.inlayHints.bindingModeHints.enable": true,
+  "rust-analyzer.inlayHints.lifetimeElisionHints.useParameterNames": true,
+  "rust-analyzer.inlayHints.closureReturnTypeHints.enable": "always",
+  "terminal.integrated.defaultProfile.linux": "tmux",
+  "git.openRepositoryInParentFolders": "never",
+  "gitlens.graph.minimap.enabled": false,
+  "enableTelemetry": false,
+  "workbench.editor.enablePreview": false,
+  "editor.largeFileOptimizations": false,
+  "json.maxItemsComputed": 500000,
+  "editor.maxTokenizationLineLength": 200000000,
+  "window.zoomLevel": -1,
+  "github.copilot.editor.enableAutoCompletions": true,
+  "githubPullRequests.pullBranch": "never",
+  "githubPullRequests.remotes": ["origin"],
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "editor.codeActionsOnSave": {},
+  "go.toolsEnvVars": {},
+  "window.confirmSaveUntitledWorkspace": false,
+  "docker.extension.enableComposeLanguageServer": false,
+  "go.inferGopath": true,
+  "go.toolsManagement.go": "/opt/homebrew/bin/go",
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "python.analysis.inlayHints.variableTypes": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.languageServer": "Pylance",
+  "[dockercompose]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "advanced",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": true
+    },
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  }
+}

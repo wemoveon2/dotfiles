@@ -49,16 +49,20 @@ if ! [ -x "$(command -v brew)"  ]; then
   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 brew update
-brew install docker 
-brew install neovim 
+brew install docker
+brew install neovim
 if ! [ -x "$(command -v pyenv)" ]; then
 	brew install pyenv
 	brew install pyenv-virtualenv
 fi
 # go
-brew install go 
+brew install go
 # rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
 	curl https://sh.rustup.rs -sSf | sh
+fi
+# VS Code
+if ! [ -x "$(command -v code)" ]; then
+	brew install --cask visual-studio-code
 fi
 {{ end -}}
