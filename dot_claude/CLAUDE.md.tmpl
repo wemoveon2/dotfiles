@@ -1,0 +1,18 @@
+# Global Claude Instructions
+
+## Multi-Repository Context
+
+| Repository | Path | Purpose |
+|------------|------|---------|
+| clarifai | `{{ .chezmoi.homeDir }}/work/clarifai` | Main backend monorepo (Go APIs + Python ML services) |
+| clarifai-python | `{{ .chezmoi.homeDir }}/work/clarifai-python` | Official Python SDK |
+| clarifai-protocol | `{{ .chezmoi.homeDir }}/work/clarifai-protocol` | Runner protocol library |
+
+## Environment
+
+- `CLARIFAI_PAT` — Personal Access Token for API auth
+- Base URL: `https://api.clarifai.com`
+
+See each repo's CLAUDE.md for project-specific instructions.
+
+@RTK.md
