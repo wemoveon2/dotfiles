@@ -1,0 +1,84 @@
+# Powerlevel10k instant prompt — must stay near the top.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# -----------------------------------------------------------------------------
+# zim
+# -----------------------------------------------------------------------------
+ZIM_HOME=${ZDOTDIR:-${HOME}}/.zim
+
+# Download zimfw if missing.
+if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
+  if (( ${+commands[curl]} )); then
+    curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
+        https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+  else
+    mkdir -p ${ZIM_HOME} && wget -nv -O ${ZIM_HOME}/zimfw.zsh \
+        https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
+  fi
+fi
+# Install missing modules and regenerate init.zsh when .zimrc changes.
+if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZIM_CONFIG_FILE:-${ZDOTDIR:-${HOME}}/.zimrc} ]]; then
+  source ${ZIM_HOME}/zimfw.zsh init
+fi
+source ${ZIM_HOME}/init.zsh
+
+# -----------------------------------------------------------------------------
+# Prompt config
+# -----------------------------------------------------------------------------
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+POWERLEVEL10K_SHORTEN_DIR_LENGTH=2
+
+# Shell behavior previously set via oh-my-zsh.
+CASE_SENSITIVE="true"
+HIST_STAMPS="mm/dd/yyyy"
+
+# fzf keybindings + completion (install via `$(brew --prefix)/opt/fzf/install`).
+[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
+
+# -----------------------------------------------------------------------------
+# PATH / env
+# -----------------------------------------------------------------------------
+export PATH=$PATH:$HOME/.local/bin
+{{ if eq .chezmoi.os "darwin" -}}
+export GOROOT=/opt/homebrew/opt/go/libexec
+{{ else -}}
+export GOROOT=/usr/local/go
+{{ end -}}
+export GOPATH=~/work/clarifai/go
+export PATH=$PATH:$GOROOT/bin
+export GOSUMDB=off
+
+eval "$(jump shell)"
+
+export EDITOR="nvim"
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/root/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/root/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/root/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
+export PATH=$PATH:~/bin
+
+[ -f ~/.zsh_aliases ] && source ~/.zsh_aliases
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+{{ if eq .chezmoi.os "darwin" -}}
+# Added by Antigravity
+export PATH="{{ .chezmoi.homeDir }}/.antigravity/antigravity/bin:$PATH"
+{{ end -}}

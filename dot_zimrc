@@ -1,12 +1,28 @@
-zmodule zsh-users/zsh-syntax-highlighting
-zmodule zsh-users/zsh-autosuggestions
-zmodule romkatv/powerlevel10k --use degit
-zmodule asciiship
-zmodule zsh-users/zsh-completions --fpath src
-zmodule completion
+# Core: shell options, completion init, terminal title, basic utilities.
+zmodule environment
+zmodule input
+zmodule termtitle
+zmodule utility
 
+# Git aliases (g, ga, gst, gco, gd, gca, etc.). User aliases in ~/.zsh_aliases
+# are sourced AFTER zim and override conflicting ones (gl, gc).
+zmodule git
+
+# Prompt.
+zmodule romkatv/powerlevel10k --use degit
+
+# OMZ plugins kept (zim loads them directly).
 zmodule ohmyzsh/ohmyzsh --root plugins/colorize
 zmodule ohmyzsh/ohmyzsh --root plugins/colored-man-pages
 zmodule ohmyzsh/ohmyzsh --root plugins/extract
 zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
 zmodule ohmyzsh/ohmyzsh --root plugins/poetry
+
+# Completion.
+zmodule zsh-users/zsh-completions --fpath src
+zmodule completion
+
+# Order matters: these three must be last, in this order.
+zmodule zsh-users/zsh-syntax-highlighting
+zmodule zsh-users/zsh-history-substring-search
+zmodule zsh-users/zsh-autosuggestions
