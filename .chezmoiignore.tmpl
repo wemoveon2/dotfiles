@@ -1,0 +1,15 @@
+install.sh
+
+{{- /* known_hosts drifts constantly (SDM rotates ports); let SSH manage it. */}}
+.ssh/known_hosts
+.ssh/known_hosts.old
+
+{{- /* VS Code config: apply OS-appropriate path, ignore the other. */}}
+{{ if ne .chezmoi.os "darwin" -}}
+Library
+Library/**
+{{ end -}}
+{{ if eq .chezmoi.os "darwin" -}}
+.config/Code
+.config/Code/**
+{{ end -}}
