@@ -1,7 +1,7 @@
 #!/bin/bash
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
-sudo apt install fzf tmux -y
+sudo apt install fzf tmux jq -y
 # install zsh and ohmyzsh + p10k
 if ! [[ -x "$(command -v zsh)" ]]; then
 	sudo apt install zsh curl git -y
@@ -28,18 +28,13 @@ if ! [ -x "$(command -v brew)"  ]; then
 	echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 brew update
-echo "Installing age, git, lazygit, and jump"
-brew install age git lazygit jump 
-echo "Installing flycut"
-brew install --cask flycut 
-# Download zimfw plugin manager if missing.
-if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
-  curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
-      https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
-fi
-# Install missing modules, and update ${ZIM_HOME}/init.zsh if missing or outdated.
-if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZDOTDIR:-${HOME}}/.zimrc ]]; then
-
-  source ${ZIM_HOME}/zimfw.zsh init -q
-fi
+brew install age git lazygit jump jq fzf
+brew install --cask flycut
+# fzf shell integration (key-bindings + completion).
+"$(brew --prefix)/opt/fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
 {{ end -}}
+
+# tmux plugin manager (cross-platform).
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+	git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+fi

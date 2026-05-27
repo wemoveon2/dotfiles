@@ -50,7 +50,7 @@ cat > ~/.config/chezmoi/chezmoi.toml <<'EOF'
 encryption = "age"
 [age]
     identity = "~/.config/chezmoi/key.txt"
-    recipient = "age193wd0hfuhtjfsunlq3c83s8m93pde442dkcn7lmj3lspeekm9g7stwutrl"
+    recipient = "age17zeqh4rqpr0s0d2vn9yjjdxtavquh77htskxrwgyjz6dgzm8gfps3t6lnv"
 EOF
 ```
 
