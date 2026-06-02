@@ -41,23 +41,23 @@ if ! [ -x "$(command -v cargo)" ]; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
 fi
 {{ else if eq .chezmoi.os "darwin" -}}
-# see if homebrew is installed, install it if not
-if ! [ -x "$(command -v brew)"  ]; then
+# Install homebrew if missing. NONINTERACTIVE=1 lets the installer run under
+# chezmoi without a TTY for the "Press RETURN" prompt.
+if ! [ -x "/opt/homebrew/bin/brew" ] && ! [ -x "/usr/local/bin/brew" ]; then
 	echo "Installing homebrew"
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
+# Make brew available to the rest of this script.
+eval "$(/opt/homebrew/bin/brew shellenv)"
 brew update
-brew install docker 
-brew install neovim 
-if ! [ -x "$(command -v pyenv)" ]; then
-	brew install pyenv
-	brew install pyenv-virtualenv
-fi
-# go
-brew install go 
+brew install docker neovim pyenv pyenv-virtualenv go
 # rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
+fi
+# VS Code
+if ! [ -x "$(command -v code)" ]; then
+	brew install --cask visual-studio-code
 fi
 {{ end -}}

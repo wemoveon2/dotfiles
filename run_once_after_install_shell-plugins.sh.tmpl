@@ -1,7 +1,5 @@
 #!/bin/bash
 {{ if eq .chezmoi.os "linux" -}}
-sudo apt install shellcheck fd-find
-ln -s $(which fdfind) ~/.local/bin/fd
-{{ end -}} 
-# restart shell
-exec $SHELL
+sudo apt install shellcheck fd-find -y
+[ -e ~/.local/bin/fd ] || ln -s "$(which fdfind)" ~/.local/bin/fd
+{{ end -}}

@@ -20,13 +20,16 @@ fi
 if ! [ -x "$(command -v jump)" ]; then
 	curl -Lo jump_0.51.0_amd64.deb https://github.com/gsamokovarov/jump/releases/download/v0.51.0/jump_0.51.0_amd64.deb && sudo dpkg -i jump_0.51.0_amd64.deb && rm jump_0.51.0_amd64.deb
 fi
-{{ else if eq .chezmoi.os "darwin" -}} 
-# see if homebrew is installed, install it if not
-if ! [ -x "$(command -v brew)"  ]; then
+{{ else if eq .chezmoi.os "darwin" -}}
+# Install homebrew if missing. NONINTERACTIVE=1 lets the installer run under
+# chezmoi without a TTY.
+if ! [ -x "/opt/homebrew/bin/brew" ] && ! [ -x "/usr/local/bin/brew" ]; then
 	echo "Installing homebrew"
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 	echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
+# Make brew available to the rest of this script.
+eval "$(/opt/homebrew/bin/brew shellenv)"
 brew update
 brew install age git lazygit jump jq fzf
 brew install --cask flycut iterm2 rectangle
