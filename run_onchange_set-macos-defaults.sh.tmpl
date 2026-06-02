@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# macOS system preferences (idempotent). Edit, then `chezmoi apply` re-runs
+# this only when the script content changes (run_onchange = hash-tracked).
+#
+# To inspect a current value: `defaults read <domain> <key>`
+# To find a domain for a setting: change it in System Settings, then run
+# `defaults read | head -100` or `defaults domains | tr ',' '\n' | grep -i X`
+{{ if eq .chezmoi.os "darwin" -}}
+set -euo pipefail
+
+echo "[macos-defaults] applying preferences (may prompt for Full Disk Access)"
+
+# --- Keyboard --------------------------------------------------------------
+# Fast key repeat (2 = faster than the slider's "fast" max of 2). Initial
+# repeat delay 15 (= about 225ms). Disable press-and-hold so vim 'j' repeats.
+defaults write NSGlobalDomain KeyRepeat -int 2
+defaults write NSGlobalDomain InitialKeyRepeat -int 15
+defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
+# --- Trackpad --------------------------------------------------------------
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
+defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+
+# --- Finder ----------------------------------------------------------------
+# Show hidden files, all extensions, path + status bars. Default view = list.
+defaults write com.apple.finder AppleShowAllFiles -bool true
+defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+defaults write com.apple.finder ShowPathbar -bool true
+defaults write com.apple.finder ShowStatusBar -bool true
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"  # search current folder
+defaults write com.apple.finder _FXSortFoldersFirst -bool true
+defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+defaults write com.apple.finder WarnOnEmptyTrash -bool false
+
+# --- Screenshots -----------------------------------------------------------
+mkdir -p "$HOME/Screenshots"
+defaults write com.apple.screencapture location -string "$HOME/Screenshots"
+defaults write com.apple.screencapture type -string "png"
+defaults write com.apple.screencapture disable-shadow -bool true
+
+# --- Dock ------------------------------------------------------------------
+defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock autohide-delay -float 0
+defaults write com.apple.dock autohide-time-modifier -float 0.2
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock tilesize -int 36
+defaults write com.apple.dock minimize-to-application -bool true
+defaults write com.apple.dock mru-spaces -bool false  # don't auto-rearrange spaces
+
+# --- Mission Control / Hot Corners ----------------------------------------
+defaults write com.apple.dock expose-group-apps -bool true
+
+# --- Misc text input ------------------------------------------------------
+# Disable auto-corrections that fight you when writing code.
+defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
+defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
+
+# --- Save dialogs ---------------------------------------------------------
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
+
+# --- Appearance -----------------------------------------------------------
+defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
+
+# Flush prefs daemon and reload affected apps.
+killall cfprefsd 2>/dev/null || true
+killall Dock Finder SystemUIServer 2>/dev/null || true
+echo "[macos-defaults] applied. Some changes require logout/restart to fully take effect."
+{{ end -}}
