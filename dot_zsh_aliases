@@ -1,7 +1,7 @@
 # work related aliases
 alias l='kubectl --context=colo --namespace=local-k8s-$USER'
 alias t='kubectl --context=colo --namespace=test-k8s-$USER'
-alias watch='watch -n .5 '
+alias watch='watch -n 1.5 '
 alias nuke='l delete deploy,sts,rs,hpa,po --all'
 alias nuket='t delete deploy,sts,rs,hpa,po --all'
 alias nukef='nuke --grace-period=0 --force'
@@ -31,6 +31,8 @@ alias ...='cd ../..'
 alias gsw='git switch'
 alias gp='git push'
 alias gl="git log --pretty=format:'%Cred%s %h  %n%ad%d %n%an %ad%Cgreen%d' --numstat"
+alias gwta="git worktree add"
+alias gwtd="git worktree remove"
 # alias glo="git log --pretty=format:'%Cred%s %h  %n%ad%d %n%an %ad%n%n' --numstat --oneline"
 alias glo="git log --oneline"
 alias gss="git status --short"
@@ -40,8 +42,12 @@ alias gc='git commit -m'
 alias pexr='poetry export --without-hashes --format=requirements.txt > requirements.txt'
 # exa cli tool
 alias ez="eza"
+alias prodcomp="kubectl --kubeconfig ~/.kube/config --context=cf-comp-prod-virginia-admin"
 
-saml2aws_login() {
+saws() {
   saml2aws login; 
   scp -r ~/.aws/credentials q8:~/.aws/credentials
 }
+
+alias devcomp='kubectl --kubeconfig ~/.kube/config --context=cf-comp-dev-virginia-admin'
+
