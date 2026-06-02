@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Point macOS GUI apps at the chezmoi-synced preference files.
+# Runs once per checksum change. Re-run by editing the script or re-running
+# `chezmoi state delete-bucket --bucket=scriptState` then `chezmoi apply`.
+{{ if eq .chezmoi.os "darwin" -}}
+set -euo pipefail
+
+ITERM_DIR="$HOME/.config/iterm2"
+RECT_PLIST="$HOME/.config/rectangle/com.knollsoft.Rectangle.plist"
+
+# --- iTerm2: load prefs from chezmoi-synced folder -------------------------
+if [ -f "$ITERM_DIR/com.googlecode.iterm2.plist" ]; then
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$ITERM_DIR"
+  defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLost -bool true
+  echo "[mac-app-prefs] iTerm2 configured to load from $ITERM_DIR"
+fi
+
+# --- Rectangle: import synced plist via defaults (proper cfprefsd path) ----
+if [ -f "$RECT_PLIST" ]; then
+  defaults import com.knollsoft.Rectangle "$RECT_PLIST"
+  echo "[mac-app-prefs] Rectangle prefs imported from $RECT_PLIST"
+  # Restart Rectangle to pick up new bindings.
+  pkill -x Rectangle 2>/dev/null || true
+  open -ga Rectangle 2>/dev/null || true
+fi
+{{ end -}}

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSWindow Frame SUUpdateAlert</key>
+	<string>554 514 620 398 0 0 1728 1084 </string>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUHasLaunchedBefore</key>
+	<true/>
+	<key>SULastCheckTime</key>
+	<date>2026-06-02T04:03:23Z</date>
+	<key>SUUpdateGroupIdentifier</key>
+	<integer>603435465</integer>
+	<key>alternateDefaultShortcuts</key>
+	<true/>
+	<key>centerThird</key>
+	<dict>
+		<key>keyCode</key>
+		<integer>126</integer>
+		<key>modifierFlags</key>
+		<integer>1310720</integer>
+	</dict>
+	<key>firstThird</key>
+	<dict>
+		<key>keyCode</key>
+		<integer>123</integer>
+		<key>modifierFlags</key>
+		<integer>1310720</integer>
+	</dict>
+	<key>footprintAnimationDurationMultiplier</key>
+	<real>0.75</real>
+	<key>hideMenubarIcon</key>
+	<true/>
+	<key>internalTilingNotified</key>
+	<true/>
+	<key>landscapeSnapAreas</key>
+	<string>[3,{"action":16},7,{"compound":-4},1,{"action":15},2,{"action":2},4,{"compound":-2},5,{"compound":-3},6,{"action":13},8,{"action":14}]</string>
+	<key>lastThird</key>
+	<dict>
+		<key>keyCode</key>
+		<integer>124</integer>
+		<key>modifierFlags</key>
+		<integer>1310720</integer>
+	</dict>
+	<key>lastVersion</key>
+	<string>93</string>
+	<key>launchOnLogin</key>
+	<true/>
+	<key>subsequentExecutionMode</key>
+	<integer>1</integer>
+</dict>
+</plist>
