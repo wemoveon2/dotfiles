@@ -29,15 +29,18 @@ source $ZSH/oh-my-zsh.sh
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 POWERLEVEL10K_SHORTEN_DIR_LENGTH=2
 
+# Make homebrew available even when zshrc starts as a non-login shell.
+[ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"
 export GOROOT=/opt/homebrew/opt/go/libexec
 export GOPATH=~/work/clarifai/go
 export PATH=$PATH:$GOROOT/bin
-eval "$(jump shell)"
+command -v jump >/dev/null 2>&1 && eval "$(jump shell)"
 
 export EDITOR="nvim"
 
 [ -f ~/.zsh_aliases ] && source ~/.zsh_aliases
 
+# pyenv (skip if not installed yet)
 export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
+[ -d "$PYENV_ROOT/bin" ] && export PATH="$PYENV_ROOT/bin:$PATH"
+command -v pyenv >/dev/null 2>&1 && eval "$(pyenv init -)"
