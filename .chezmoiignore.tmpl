@@ -4,6 +4,10 @@ install.sh
 .ssh/known_hosts
 .ssh/known_hosts.old
 
+{{- /* Pi config is kept separate from dotfiles/chezmoi. */}}
+.pi
+.pi/**
+
 {{- /* VS Code config: apply OS-appropriate path, ignore the other. */}}
 {{ if ne .chezmoi.os "darwin" -}}
 Library

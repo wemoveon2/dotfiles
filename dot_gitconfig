@@ -7,3 +7,9 @@
 	defaultBranch = main
 [pull]
         rebase = true
+[url "git@gitlab.nebius.dev:"]
+	insteadOf = https://gitlab.nebius.dev/
+[protocol]
+	version = 2
+[credential]
+	helper = osxkeychain

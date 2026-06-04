@@ -1,12 +1,27 @@
-zmodule zsh-users/zsh-syntax-highlighting
-zmodule zsh-users/zsh-autosuggestions
-zmodule romkatv/powerlevel10k --use degit
-zmodule asciiship
-zmodule zsh-users/zsh-completions --fpath src
-zmodule completion
+# Core: shell options, input keybindings, terminal title, basic utilities.
+zmodule environment
+zmodule input
+zmodule termtitle
+zmodule utility
 
+# Prompt.
+zmodule romkatv/powerlevel10k --use degit
+
+# OMZ plugins that don't need compdef.
 zmodule ohmyzsh/ohmyzsh --root plugins/colorize
 zmodule ohmyzsh/ohmyzsh --root plugins/colored-man-pages
 zmodule ohmyzsh/ohmyzsh --root plugins/extract
+
+# Completion (runs compinit).
+zmodule zsh-users/zsh-completions --fpath src
+zmodule completion
+
+# OMZ plugins that use `compdef` must load AFTER completion module.
+# git plugin gives gst, gco, gd, gp, ga, gaa, ggsup, and all other OMZ aliases.
+zmodule ohmyzsh/ohmyzsh --root plugins/git
 zmodule ohmyzsh/ohmyzsh --root plugins/gitignore
-zmodule ohmyzsh/ohmyzsh --root plugins/poetry
+
+# Order matters: these three must be last, in this order.
+zmodule zsh-users/zsh-syntax-highlighting
+zmodule zsh-users/zsh-history-substring-search
+zmodule zsh-users/zsh-autosuggestions

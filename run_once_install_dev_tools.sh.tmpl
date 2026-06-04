@@ -51,7 +51,8 @@ fi
 # Make brew available to the rest of this script.
 eval "$(/opt/homebrew/bin/brew shellenv)"
 brew update
-brew install docker neovim pyenv pyenv-virtualenv go
+brew install docker neovim pyenv pyenv-virtualenv go helm k9s
+brew install --cask orbstack
 # rust cargo
 if ! [ -x "$(command -v cargo)" ]; then
 	curl https://sh.rustup.rs -sSf | sh -s -- -y
