@@ -4,9 +4,18 @@ install.sh
 .ssh/known_hosts
 .ssh/known_hosts.old
 
-{{- /* Pi config is kept separate from dotfiles/chezmoi. */}}
-.pi
-.pi/**
+{{- /* Pi config: sync stable config/code, not credentials, sessions, binaries, packages, or runtime state. */}}
+.pi/agent/auth.json
+.pi/agent/sessions
+.pi/agent/sessions/**
+.pi/agent/bin
+.pi/agent/bin/**
+.pi/agent/npm
+.pi/agent/npm/**
+.pi/agent/git
+.pi/agent/git/**
+.pi/agent/agentmemory.log
+.pi/agent/agentmemory.pid
 
 {{- /* VS Code config: apply OS-appropriate path, ignore the other. */}}
 {{ if ne .chezmoi.os "darwin" -}}

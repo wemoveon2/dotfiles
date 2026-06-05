@@ -15,6 +15,7 @@ One command sets up a new macOS, Linux, or Windows machine.
 | **VS Code** | `settings.json`, `keybindings.json`, full 91-extension list (auto-installed) |
 | **Neovim** | LazyVim starter bootstrap |
 | **Claude Code** | global `CLAUDE.md`, RTK token-killer hook, agent definitions, plugin settings |
+| **Pi** | stable Pi settings, extensions, agents, skills, prompts, and themes |
 | **AWS** | `.saml2aws` (Okta SAML config) |
 
 Plus install scripts that provision the underlying tools: `brew`/`apt` install of
@@ -90,6 +91,7 @@ git add -A && git commit -m '...' && git push
 .chezmoiignore.tmpl      # Per-OS file inclusion rules
 
 dot_claude/              # → ~/.claude/      (Claude Code config, see README in subsystem)
+dot_pi/                  # → ~/.pi/          (Pi stable config/code; auth/sessions/runtime ignored)
 dot_config/Code/User/    # → ~/.config/Code/User/   (VS Code on Linux)
 Library/.../Code/User/   # → ~/Library/Application Support/Code/User/  (VS Code on macOS)
 private_dot_ssh/         # → ~/.ssh/        (encrypted)
@@ -180,4 +182,6 @@ your GitHub, point `run_once_install-lazyvim.sh.tmpl` at your fork, and commit
 - VS Code extensions are install-only; the script never uninstalls.
 - The `dot_saml2aws` file has work-specific Okta URLs/usernames — fork if you
   use a different SAML setup.
+- Pi credentials, sessions, downloaded binaries/packages, and runtime logs are
+  intentionally ignored; only stable config/code is tracked.
 - macOS-only paths in `.zshrc` are templated for darwin/linux where needed.
