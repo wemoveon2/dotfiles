@@ -7,7 +7,7 @@ One command sets up a new macOS, Linux, or Windows machine.
 
 | Area | Files / Tools |
 |---|---|
-| **Shell** | `.zshrc`, `.zshenv`, `.zsh_aliases`, `.zsh_functions`, oh-my-zsh setup (zim available on a branch) |
+| **Shell** | `.zshrc`, `.zimrc`, `.zshenv`, `.zsh_aliases`, `.zsh_functions`, zim setup |
 | **Prompt** | powerlevel10k (`.p10k.zsh`) |
 | **Git** | `.gitconfig` |
 | **Tmux** | `.tmux.conf` (catppuccin theme, vi keys, C-a prefix) |
@@ -94,8 +94,8 @@ dot_config/Code/User/    # → ~/.config/Code/User/   (VS Code on Linux)
 Library/.../Code/User/   # → ~/Library/Application Support/Code/User/  (VS Code on macOS)
 private_dot_ssh/         # → ~/.ssh/        (encrypted)
 
-dot_zshrc                # → ~/.zshrc       (currently oh-my-zsh; zim on switch-to-zim branch)
-dot_zimrc                # → ~/.zimrc
+private_dot_zshrc.tmpl   # → ~/.zshrc       (zim bootstrap + shell setup)
+dot_zimrc                # → ~/.zimrc        (zim modules)
 dot_zsh_aliases          # → ~/.zsh_aliases (k8s, git, work shortcuts)
 dot_zsh_functions        # → ~/.zsh_functions
 dot_zshenv               # → ~/.zshenv
@@ -121,23 +121,6 @@ Naming conventions chezmoi uses (no underscores in the README — they're real p
 - `executable_X` → file with executable bit
 - `X.tmpl` → Go-templated
 - `run_once_X` / `run_onchange_X` → scripts triggered by `chezmoi apply`
-
-## Branches
-
-| Branch | Purpose | State |
-|---|---|---|
-| `master` | Stable config | Default. Use this for new machines. |
-| `switch-to-zim` | Replace oh-my-zsh with [zim](https://zimfw.sh) for faster shell startup | Tested locally. Merge when validated. |
-
-To try the zim branch on an existing setup:
-
-```bash
-cd ~/.local/share/chezmoi
-git checkout switch-to-zim
-chezmoi apply --force ~/.zshrc ~/.zimrc
-exec zsh
-# Revert: git checkout master && chezmoi apply --force ~/.zshrc
-```
 
 ## Per-OS notes
 
@@ -197,5 +180,4 @@ your GitHub, point `run_once_install-lazyvim.sh.tmpl` at your fork, and commit
 - VS Code extensions are install-only; the script never uninstalls.
 - The `dot_saml2aws` file has work-specific Okta URLs/usernames — fork if you
   use a different SAML setup.
-- macOS-only paths (`/opt/homebrew/...`) in `.zshrc` are templated for darwin
-  on the `switch-to-zim` branch but still hardcoded on `master`.
+- macOS-only paths in `.zshrc` are templated for darwin/linux where needed.

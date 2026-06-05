@@ -2,7 +2,7 @@
 {{ if eq .chezmoi.os "linux" -}}
 sudo apt update && sudo apt upgrade
 sudo apt install fzf tmux jq -y
-# install zsh and ohmyzsh + p10k
+# install zsh; zim bootstraps itself from .zshrc
 if ! [[ -x "$(command -v zsh)" ]]; then
 	sudo apt install zsh curl git -y
 fi
