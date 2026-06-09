@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "toolPrefix": "mcp",
+    "requestTimeoutMs": 30000,
+    "maxRetries": 3
+  },
+  "mcpServers": {
+    "slack": {
+      "transport": "streamable-http",
+      "url": "https://mcp.slack.com/mcp",
+      "auth": {
+        "type": "oauth",
+        "clientId": "1601185624273.8899143856786",
+        "redirectUrl": "http://127.0.0.1:3118/callback",
+        "scope": "search:read.public search:read.private channels:history groups:history mpim:history im:history channels:read groups:read mpim:read users:read users:read.email files:read"
+      },
+      "lifecycle": "lazy"
+    }
+  }
+}

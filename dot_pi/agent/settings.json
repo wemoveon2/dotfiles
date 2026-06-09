@@ -1,9 +1,17 @@
 {
-  "lastChangelogVersion": "0.78.1",
+  "lastChangelogVersion": "0.79.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "defaultThinkingLevel": "high",
   "extensions": [
     "~/.pi/agent/extensions/agentmemory"
+  ],
+  "skills": [
+    "/Users/alanyu/work/claude/skills/retrospective-debugging"
+  ],
+  "packages": [
+    "npm:@diegopetrucci/pi-context-inspector",
+    "npm:pi-mcp-extension",
+    "npm:pi-agent-flow"
   ]
 }

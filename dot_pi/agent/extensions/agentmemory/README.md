@@ -43,9 +43,16 @@ If you place it under `~/.pi/agent/extensions/agentmemory/`, pi will also auto-d
 - `memory_health` — confirm the shared memory server is reachable
 - `memory_search` — search prior decisions, bugs, workflows, and preferences
 - `memory_save` — write durable facts back to long-term memory
+- `memory_sessions` — list recent sessions or inspect observations for a session
+- `memory_file_context` — retrieve prior observations about specific files
+- `memory_timeline` — view chronological observations around a date/keyword anchor
+- `memory_profile` — show a compact project profile
+- `memory_lesson_search` — search durable lessons learned
+- `memory_verify` — trace provenance for a memory/observation ID
 - `/agentmemory-status` — check health from inside pi
 - `before_agent_start` recall — injects relevant memories into the prompt
 - `agent_end` capture — saves completed conversation turns back to agentmemory
+- `session_shutdown` closeout — calls agentmemory session/end on quit/switch/fork so summarize/graph/consolidation can run; skips `/reload`
 
 ## Environment variables
 

@@ -2,8 +2,9 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, truncateHead } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const DEFAULT_BASE_URL = "https://nebius.atlassian.net/wiki";
@@ -31,24 +32,44 @@ type SearchResult = {
 	_links?: { webui?: string; tinyui?: string };
 };
 
+type ConfluenceConfigFile = {
+	baseUrl?: string;
+	email?: string;
+	apiToken?: string;
+	bearerToken?: string;
+	authMode?: "basic" | "bearer";
+};
+
+function loadConfigFile(): ConfluenceConfigFile {
+	const configPath = process.env.CONFLUENCE_CONFIG || join(homedir(), ".pi", "agent", "confluence.json");
+	if (!existsSync(configPath)) return {};
+	try {
+		return JSON.parse(readFileSync(configPath, "utf8")) as ConfluenceConfigFile;
+	} catch (error) {
+		throw new Error(`Failed to read Confluence config file ${configPath}: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
 function getConfig() {
-	const baseUrl = (process.env.CONFLUENCE_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
-	const email = process.env.CONFLUENCE_EMAIL;
-	const apiToken = process.env.CONFLUENCE_API_TOKEN || process.env.ATLASSIAN_API_TOKEN;
-	const bearerToken = process.env.CONFLUENCE_BEARER_TOKEN;
+	const fileConfig = loadConfigFile();
+	const baseUrl = (process.env.CONFLUENCE_BASE_URL || fileConfig.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "");
+	const email = process.env.CONFLUENCE_EMAIL || fileConfig.email;
+	const apiToken = process.env.CONFLUENCE_API_TOKEN || process.env.ATLASSIAN_API_TOKEN || fileConfig.apiToken;
+	const bearerToken = process.env.CONFLUENCE_BEARER_TOKEN || fileConfig.bearerToken;
+	const authMode = process.env.CONFLUENCE_AUTH_MODE || fileConfig.authMode;
 
 	let authorization: string | undefined;
 	if (bearerToken) {
 		authorization = `Bearer ${bearerToken}`;
 	} else if (email && apiToken) {
 		authorization = `Basic ${Buffer.from(`${email}:${apiToken}`).toString("base64")}`;
-	} else if (apiToken && process.env.CONFLUENCE_AUTH_MODE === "bearer") {
+	} else if (apiToken && authMode === "bearer") {
 		authorization = `Bearer ${apiToken}`;
 	}
 
 	if (!authorization) {
 		throw new Error(
-			"Confluence credentials not configured. For Atlassian Cloud set CONFLUENCE_EMAIL and CONFLUENCE_API_TOKEN before starting pi. Optionally set CONFLUENCE_BASE_URL.",
+			"Confluence credentials not configured. Create ~/.pi/agent/confluence.json with baseUrl, email, and apiToken; or set CONFLUENCE_EMAIL and CONFLUENCE_API_TOKEN before starting pi.",
 		);
 	}
 

@@ -1,0 +1,5 @@
+{
+  "baseUrl": "https://nebius.atlassian.net/wiki",
+  "email": "your-email@company.com",
+  "apiToken": "paste-atlassian-api-token-here"
+}

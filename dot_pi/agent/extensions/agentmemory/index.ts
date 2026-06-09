@@ -29,12 +29,52 @@ type HealthResponse = {
   };
 };
 
+type AgentMemorySession = {
+  id?: string;
+  status?: string;
+  project?: string;
+  cwd?: string;
+  startedAt?: string;
+  updatedAt?: string;
+  endedAt?: string;
+  observationCount?: number;
+  summary?: string;
+  firstPrompt?: string;
+};
+
+type AgentMemoryObservation = {
+  id?: string;
+  obsId?: string;
+  type?: string;
+  title?: string;
+  subtitle?: string;
+  narrative?: string;
+  timestamp?: string;
+  importance?: number;
+  files?: string[];
+  sessionId?: string;
+};
+
+type AgentMemoryLesson = {
+  id?: string;
+  content?: string;
+  context?: string;
+  confidence?: number;
+  project?: string;
+  tags?: string[];
+  updatedAt?: string;
+  createdAt?: string;
+};
+
+type HttpMethod = "GET" | "POST" | "DELETE";
+
 const DEFAULT_URL = process.env.AGENTMEMORY_URL || "http://localhost:3111";
 const guardPlaintextBearerAuth = createPlaintextBearerAuthGuard();
 const TOOL_GUIDANCE = [
   "agentmemory is available for cross-session memory.",
   "Use memory_search to recall prior decisions, preferences, bugs, and workflows.",
   "Use memory_save when you discover durable facts worth remembering beyond this session.",
+  "Use the session/profile/file/timeline/lesson/provenance memory tools only when they add task-relevant context.",
 ].join(" ");
 
 function normalizeBaseUrl(url: string): string {
@@ -66,6 +106,24 @@ function getLastAssistantText(messages: unknown[]): string {
   return "";
 }
 
+function clip(text: string, maxChars = 700): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxChars - 1)).trim()}…`;
+}
+
+function splitCsv(value: string): string[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function jsonPreview(value: unknown, maxChars = 8000): string {
+  const text = JSON.stringify(value, null, 2) || "null";
+  return text.length <= maxChars ? text : `${text.slice(0, maxChars).trim()}\n…[truncated]`;
+}
+
 function formatSearchResults(results: SmartSearchResult[]): string {
   if (!results.length) return "No relevant memories found.";
   return results
@@ -77,7 +135,63 @@ function formatSearchResults(results: SmartSearchResult[]): string {
       const type = obs.type?.trim() || "memory";
       const score = result.combinedScore ?? result.score;
       const scoreText = typeof score === "number" ? ` [score=${score.toFixed(3)}]` : "";
-      return `- ${title} (${type})${scoreText}${narrative ? `: ${narrative}` : ""}`;
+      return `- ${title} (${type})${scoreText}${narrative ? `: ${clip(narrative)}` : ""}`;
+    })
+    .join("\n");
+}
+
+function formatSessions(sessions: AgentMemorySession[], limit: number, project?: string): string {
+  const filtered = project ? sessions.filter((session) => session.project === project || session.cwd === project) : sessions;
+  const sorted = [...filtered].sort((a, b) => (b.updatedAt || b.startedAt || "").localeCompare(a.updatedAt || a.startedAt || ""));
+  if (!sorted.length) return "No agentmemory sessions found.";
+  return sorted
+    .slice(0, limit)
+    .map((session) => {
+      const prompt = session.firstPrompt || session.summary || "";
+      return [
+        `- ${session.id || "unknown"}`,
+        session.status ? `status=${session.status}` : "",
+        typeof session.observationCount === "number" ? `observations=${session.observationCount}` : "",
+        session.updatedAt || session.startedAt ? `updated=${session.updatedAt || session.startedAt}` : "",
+        session.cwd || session.project ? `cwd=${session.cwd || session.project}` : "",
+        prompt ? `prompt=${clip(prompt, 180)}` : "",
+      ].filter(Boolean).join(" | ");
+    })
+    .join("\n");
+}
+
+function formatObservations(observations: AgentMemoryObservation[], limit: number): string {
+  if (!observations.length) return "No observations found for that session.";
+  return observations
+    .slice(0, limit)
+    .map((obs) => {
+      const title = obs.title || obs.subtitle || obs.type || "observation";
+      const files = Array.isArray(obs.files) && obs.files.length ? ` files=${obs.files.slice(0, 4).join(",")}` : "";
+      return `- ${obs.timestamp || ""} ${obs.id || obs.obsId || ""} (${obs.type || "other"}) ${title}${files}${obs.narrative ? `: ${clip(obs.narrative, 700)}` : ""}`.trim();
+    })
+    .join("\n");
+}
+
+function formatTimeline(entries: Array<{ observation?: AgentMemoryObservation; sessionId?: string; relativePosition?: number }>, limit: number): string {
+  if (!entries.length) return "No timeline entries found.";
+  return entries
+    .slice(0, limit)
+    .map((entry) => {
+      const obs = entry.observation || {};
+      const title = obs.title || obs.subtitle || obs.type || "observation";
+      return `- ${obs.timestamp || ""} ${obs.id || ""} session=${entry.sessionId || obs.sessionId || ""} ${entry.relativePosition ?? ""} (${obs.type || "other"}) ${title}${obs.narrative ? `: ${clip(obs.narrative, 650)}` : ""}`.trim();
+    })
+    .join("\n");
+}
+
+function formatLessons(lessons: AgentMemoryLesson[]): string {
+  if (!lessons.length) return "No matching lessons found.";
+  return lessons
+    .slice(0, 8)
+    .map((lesson) => {
+      const confidence = typeof lesson.confidence === "number" ? ` confidence=${lesson.confidence.toFixed(2)}` : "";
+      const tags = Array.isArray(lesson.tags) && lesson.tags.length ? ` tags=${lesson.tags.join(",")}` : "";
+      return `- ${lesson.id || "lesson"}${confidence}${tags}: ${clip(lesson.content || lesson.context || "", 800)}`;
     })
     .join("\n");
 }
@@ -85,14 +199,20 @@ function formatSearchResults(results: SmartSearchResult[]): string {
 async function callAgentMemory<T>(
   pathname: string,
   options?: {
-    method?: "GET" | "POST";
+    method?: HttpMethod;
     body?: unknown;
+    query?: Record<string, string | number | boolean | undefined>;
     baseUrl?: string;
   },
 ): Promise<T | null> {
   const baseUrl = normalizeBaseUrl(options?.baseUrl || process.env.AGENTMEMORY_URL || DEFAULT_URL);
   const method = options?.method || "POST";
-  const url = `${baseUrl}/agentmemory/${pathname.replace(/^\/+/, "")}`;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(options?.query || {})) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  const query = params.toString();
+  const url = `${baseUrl}/agentmemory/${pathname.replace(/^\/+/, "")}${query ? `?${query}` : ""}`;
   const headers: Record<string, string> = {};
   const secret = process.env.AGENTMEMORY_SECRET;
   guardPlaintextBearerAuth(baseUrl, secret);
@@ -209,7 +329,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params) {
       const result = await callAgentMemory<Record<string, unknown>>("remember", {
-        body: { content: params.content, type: params.type || "fact" },
+        body: { content: params.content, type: params.type || "fact", project: currentProject },
       });
       if (!result) {
         return {
@@ -224,11 +344,151 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     },
   });
 
+  pi.registerTool({
+    name: "memory_sessions",
+    label: "Memory Sessions",
+    description: "List recent agentmemory sessions, or show observations for one sessionId",
+    parameters: Type.Object({
+      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 25, default: 10, description: "Maximum sessions or observations" })),
+      project: Type.Optional(Type.String({ description: "Optional project/cwd filter; defaults to all projects" })),
+      sessionId: Type.Optional(Type.String({ description: "Session ID to inspect; when provided, returns observations for that session" })),
+    }),
+    async execute(_toolCallId, params) {
+      const limit = params.limit ?? 10;
+      if (params.sessionId) {
+        const result = await callAgentMemory<{ observations?: AgentMemoryObservation[] }>("observations", {
+          method: "GET",
+          query: { sessionId: params.sessionId },
+        });
+        const observations = result?.observations || [];
+        return {
+          content: [{ type: "text", text: formatObservations(observations, limit) }],
+          details: { sessionId: params.sessionId, observations },
+        };
+      }
+      const result = await callAgentMemory<{ sessions?: AgentMemorySession[] }>("sessions", { method: "GET" });
+      const sessions = result?.sessions || [];
+      return {
+        content: [{ type: "text", text: formatSessions(sessions, limit, params.project) }],
+        details: { sessions },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_file_context",
+    label: "Memory File Context",
+    description: "Find prior agentmemory observations about specific files",
+    parameters: Type.Object({
+      files: Type.String({ description: "Comma-separated file paths to look up" }),
+      project: Type.Optional(Type.String({ description: "Project path filter; defaults to current cwd" })),
+    }),
+    async execute(_toolCallId, params) {
+      const result = await callAgentMemory<{ context?: string }>("file-context", {
+        body: { files: splitCsv(params.files), sessionId, project: params.project || currentProject },
+      });
+      const context = result?.context?.trim() || "No prior file context found for those files.";
+      return {
+        content: [{ type: "text", text: context.length <= 8000 ? context : `${context.slice(0, 8000).trim()}\n…[truncated]` }],
+        details: result || { ok: false },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_timeline",
+    label: "Memory Timeline",
+    description: "Show chronological agentmemory observations around an ISO date or keyword anchor",
+    parameters: Type.Object({
+      anchor: Type.String({ description: "Anchor point: ISO date/time or keyword" }),
+      project: Type.Optional(Type.String({ description: "Project path filter; defaults to current cwd" })),
+      before: Type.Optional(Type.Integer({ minimum: 0, maximum: 20, default: 5, description: "Observations before anchor" })),
+      after: Type.Optional(Type.Integer({ minimum: 0, maximum: 20, default: 5, description: "Observations after anchor" })),
+    }),
+    async execute(_toolCallId, params) {
+      const result = await callAgentMemory<{ entries?: Array<{ observation?: AgentMemoryObservation; sessionId?: string; relativePosition?: number }> }>("timeline", {
+        body: { anchor: params.anchor, project: params.project || currentProject, before: params.before ?? 5, after: params.after ?? 5 },
+      });
+      const entries = result?.entries || [];
+      return {
+        content: [{ type: "text", text: formatTimeline(entries, (params.before ?? 5) + (params.after ?? 5) + 1) }],
+        details: result || { ok: false },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_profile",
+    label: "Memory Profile",
+    description: "Show agentmemory's compact profile for the current or specified project",
+    parameters: Type.Object({
+      project: Type.Optional(Type.String({ description: "Project path; defaults to current cwd" })),
+    }),
+    async execute(_toolCallId, params) {
+      const project = params.project || currentProject;
+      const result = await callAgentMemory<Record<string, unknown>>("profile", {
+        method: "GET",
+        query: { project },
+      });
+      return {
+        content: [{ type: "text", text: result ? jsonPreview(result, 6000) : `No profile found for ${project}.` }],
+        details: result || { ok: false, project },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_lesson_search",
+    label: "Memory Lesson Search",
+    description: "Search durable lessons learned in agentmemory",
+    parameters: Type.Object({
+      query: Type.String({ description: "Lesson search query" }),
+      project: Type.Optional(Type.String({ description: "Project path filter; defaults to current cwd" })),
+      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 10, default: 5, description: "Maximum lessons" })),
+      minConfidence: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: "Minimum confidence" })),
+    }),
+    async execute(_toolCallId, params) {
+      const result = await callAgentMemory<{ lessons?: AgentMemoryLesson[] }>("lessons/search", {
+        body: { query: params.query, project: params.project || currentProject, limit: params.limit ?? 5, minConfidence: params.minConfidence },
+      });
+      const lessons = result?.lessons || [];
+      return {
+        content: [{ type: "text", text: formatLessons(lessons) }],
+        details: result || { ok: false },
+      };
+    },
+  });
+
+  pi.registerTool({
+    name: "memory_verify",
+    label: "Memory Verify",
+    description: "Trace provenance for an agentmemory memory or observation ID",
+    parameters: Type.Object({
+      id: Type.String({ description: "Memory ID or observation ID to verify" }),
+    }),
+    async execute(_toolCallId, params) {
+      const result = await callAgentMemory<Record<string, unknown>>("verify", {
+        body: { id: params.id },
+      });
+      return {
+        content: [{ type: "text", text: result ? jsonPreview(result, 6000) : `No provenance found for ${params.id}.` }],
+        details: result || { ok: false, id: params.id },
+      };
+    },
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     const sessionFile = ctx.sessionManager.getSessionFile();
     sessionId = sessionFile ? path.basename(sessionFile).replace(/\.[^.]+$/, "") : `ephemeral-${crypto.randomUUID().slice(0, 8)}`;
     currentProject = process.cwd();
     await refreshStatus(ctx);
+  });
+
+  pi.on("session_shutdown", async (event) => {
+    if (event.reason === "reload" || !sessionId) return;
+    await callAgentMemory("session/end", {
+      body: { sessionId },
+    });
   });
 
   pi.on("before_agent_start", async (event, ctx) => {
