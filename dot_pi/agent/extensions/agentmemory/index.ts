@@ -229,16 +229,62 @@ function jsonPreview(value: unknown, maxChars = 8000): string {
   return text.length <= maxChars ? text : `${text.slice(0, maxChars).trim()}\n…[truncated]`;
 }
 
+function getSearchObservation(result: SmartSearchResult): SmartSearchResult {
+  return result.observation ?? result;
+}
+
+function getSearchScore(result: SmartSearchResult): number | undefined {
+  return result.combinedScore ?? result.score;
+}
+
+function getSearchTitle(result: SmartSearchResult): string {
+  return getSearchObservation(result).title?.trim() || "";
+}
+
+function getSearchType(result: SmartSearchResult): string {
+  return getSearchObservation(result).type?.trim() || "memory";
+}
+
+function getSearchNarrative(result: SmartSearchResult): string {
+  return getSearchObservation(result).narrative?.trim() || "";
+}
+
+function isGenericSearchResult(result: SmartSearchResult): boolean {
+  const title = getSearchTitle(result).toLowerCase();
+  const type = getSearchType(result).toLowerCase();
+  const narrative = getSearchNarrative(result);
+  return (type === "other" || type === "conversation" || type === "memory")
+    && (title === "conversation" || /^memory \d+$/.test(title) || title === "")
+    && narrative.length < 160;
+}
+
+function filterRecallResults(results: SmartSearchResult[], limit: number): { kept: SmartSearchResult[]; filtered: SmartSearchResult[] } {
+  const kept: SmartSearchResult[] = [];
+  const filtered: SmartSearchResult[] = [];
+  const genericScoreFloor = Math.max(POLICY.recallMinScore * 2, 0.02);
+  for (const result of results) {
+    const score = getSearchScore(result);
+    const weak = typeof score === "number" && score < POLICY.recallMinScore;
+    const generic = POLICY.skipGeneric && isGenericSearchResult(result) && (typeof score !== "number" || score < genericScoreFloor);
+    if (weak || generic) {
+      filtered.push(result);
+      continue;
+    }
+    if (kept.length < limit) kept.push(result);
+    else filtered.push(result);
+  }
+  return { kept, filtered };
+}
+
 function formatSearchResults(results: SmartSearchResult[]): string {
   if (!results.length) return "No relevant memories found.";
   return results
     .slice(0, 5)
     .map((result, index) => {
-      const obs = result.observation ?? result;
-      const title = obs.title?.trim() || `Memory ${index + 1}`;
-      const narrative = obs.narrative?.trim() || "";
-      const type = obs.type?.trim() || "memory";
-      const score = result.combinedScore ?? result.score;
+      const title = getSearchTitle(result) || `Memory ${index + 1}`;
+      const narrative = getSearchNarrative(result);
+      const type = getSearchType(result);
+      const score = getSearchScore(result);
       const scoreText = typeof score === "number" ? ` [score=${score.toFixed(3)}]` : "";
       return `- ${title} (${type})${scoreText}${narrative ? `: ${clip(narrative)}` : ""}`;
     })
@@ -370,6 +416,28 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     return result;
   }
 
+  function projectPayload(project = currentProject): { project?: string } {
+    return POLICY.projectScope ? { project } : {};
+  }
+
+  async function searchMemory(
+    query: string,
+    limit: number,
+    options?: { includeLessons?: boolean; source?: string; project?: string },
+  ): Promise<SmartSearchResult[]> {
+    const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
+      body: {
+        query,
+        limit,
+        ...projectPayload(options?.project || currentProject),
+        sessionId,
+        ...(options?.includeLessons !== undefined ? { includeLessons: options.includeLessons } : {}),
+        ...(options?.source ? { source: options.source } : {}),
+      },
+    });
+    return result?.results || [];
+  }
+
   async function getHealth() {
     return await trackedCall<HealthResponse>("health", { method: "GET" });
   }
@@ -399,6 +467,28 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     description: "Show Pi-side agentmemory integration metrics",
     handler: async (_args, ctx) => {
       ctx.ui.notify(formatMetrics(metrics), "info");
+    },
+  });
+
+  pi.registerCommand("agentmemory-context", {
+    description: "Preview filtered agentmemory recall for a query",
+    handler: async (args, ctx) => {
+      const query = args.trim() || lastPrompt;
+      if (!query) {
+        ctx.ui.notify("Usage: /agentmemory-context <query>", "warning");
+        return;
+      }
+      const rawResults = await searchMemory(query, POLICY.recallLimit * 3, { includeLessons: true, source: "pi-context-preview" });
+      const { kept, filtered } = filterRecallResults(rawResults, POLICY.recallLimit);
+      metrics.recalledItems += rawResults.length;
+      metrics.filteredItems += filtered.length;
+      const text = [
+        `agentmemory recall preview for: ${clip(query, 160)}`,
+        `project=${POLICY.projectScope ? currentProject : "all"} kept=${kept.length} filtered=${filtered.length}`,
+        "",
+        formatSearchResults(kept),
+      ].join("\n");
+      ctx.ui.notify(clip(text, 1800), "info");
     },
   });
 
@@ -434,15 +524,13 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     parameters: Type.Object({
       query: Type.String({ description: "What to search for in memory" }),
       limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 10, default: 5, description: "Maximum results" })),
+      project: Type.Optional(Type.String({ description: "Optional project filter; defaults to the current project when project scoping is enabled" })),
     }),
     async execute(_toolCallId, params) {
-      const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
-        body: { query: params.query, limit: params.limit ?? 5 },
-      });
-      const results = result?.results || [];
+      const results = await searchMemory(params.query, params.limit ?? 5, { project: params.project, source: "pi-tool-memory-search" });
       return {
         content: [{ type: "text", text: formatSearchResults(results) }],
-        details: { query: params.query, results },
+        details: { query: params.query, project: params.project || currentProject, results },
       };
     },
   });
@@ -613,7 +701,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     const sessionFile = ctx.sessionManager.getSessionFile();
     sessionId = sessionFile ? path.basename(sessionFile).replace(/\.[^.]+$/, "") : `ephemeral-${crypto.randomUUID().slice(0, 8)}`;
-    currentProject = process.cwd();
+    currentProject = ctx.cwd || process.cwd();
     await refreshStatus(ctx);
   });
 
@@ -629,10 +717,11 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     lastPrompt = event.prompt?.trim() || "";
     if (!lastPrompt) return;
 
-    const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
-      body: { query: lastPrompt, limit: 5 },
-    });
-    const results = result?.results || [];
+    const rawResults = await searchMemory(lastPrompt, POLICY.recallLimit * 3, { includeLessons: true, source: "pi-before-agent-start" });
+    const { kept: results, filtered } = filterRecallResults(rawResults, POLICY.recallLimit);
+    metrics.recalledItems += rawResults.length;
+    metrics.injectedItems += results.length;
+    metrics.filteredItems += filtered.length;
     const recallBlock = results.length
       ? [
           "Relevant long-term memory from agentmemory:",
