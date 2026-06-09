@@ -217,6 +217,24 @@ function clip(text: string, maxChars = 700): string {
   return `${normalized.slice(0, Math.max(0, maxChars - 1)).trim()}…`;
 }
 
+const TRIVIAL_PROMPT_RE = /^(ok|okay|yes|yep|yeah|thanks|thank you|continue|carry on|go on|proceed|analy[sz]e again|retry|try again|commit it)$/i;
+const DURABLE_OUTCOME_RE = /\b(created|added|updated|modified|changed|moved|renamed|deleted|removed|fixed|implemented|configured|verified|validated|completed|documented|refined|decided|found|blocked|failed|committed|saved|installed|patched|reworked|migrated|closed)\b/i;
+
+function isTrivialPrompt(prompt: string): boolean {
+  return TRIVIAL_PROMPT_RE.test(prompt.replace(/\s+/g, " ").trim());
+}
+
+function autoCaptureDecision(prompt: string, assistantText: string): { capture: boolean; reason: string } {
+  if (!POLICY.autoCapture) return { capture: false, reason: "disabled" };
+  const durable = DURABLE_OUTCOME_RE.test(assistantText);
+  if (isTrivialPrompt(prompt) && !durable) return { capture: false, reason: "trivial_prompt" };
+  if (assistantText.replace(/\s+/g, " ").trim().length < 180 && !durable) return { capture: false, reason: "short_response" };
+  if (!durable && !/[`\/]?[-\w]+\.(ts|tsx|js|jsx|json|md|py|go|rs|yaml|yml|toml|sh)\b/.test(assistantText)) {
+    return { capture: false, reason: "no_durable_signal" };
+  }
+  return { capture: true, reason: durable ? "durable_outcome" : "file_context" };
+}
+
 function splitCsv(value: string): string[] {
   return value
     .split(",")
@@ -739,7 +757,15 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     if (!lastHealthOk || !lastPrompt) return;
     const assistantText = getLastAssistantText(event.messages as unknown[]);
     if (!assistantText) return;
-    void trackedCall("observe", {
+
+    metrics.autoCapturesConsidered += 1;
+    const decision = autoCaptureDecision(lastPrompt, assistantText);
+    if (!decision.capture) {
+      metrics.autoCapturesSkipped += 1;
+      return;
+    }
+
+    const result = await trackedCall("observe", {
       body: {
         hookType: "post_tool_use",
         sessionId,
@@ -747,11 +773,12 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
         cwd: currentProject,
         timestamp: new Date().toISOString(),
         data: {
-          tool_name: "conversation",
-          tool_input: lastPrompt.slice(0, 500),
+          tool_name: "pi_session_outcome",
+          tool_input: JSON.stringify({ prompt: lastPrompt.slice(0, 500), capture_reason: decision.reason }),
           tool_output: assistantText.slice(0, 4000),
         },
       },
     });
+    if (result) metrics.autoCapturesSaved += 1;
   });
 }
