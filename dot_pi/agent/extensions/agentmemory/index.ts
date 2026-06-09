@@ -69,6 +69,111 @@ type AgentMemoryLesson = {
 type HttpMethod = "GET" | "POST" | "DELETE";
 
 const DEFAULT_URL = process.env.AGENTMEMORY_URL || "http://localhost:3111";
+
+function envNumber(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function envBool(name: string, fallback: boolean): boolean {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  return !["0", "false", "no", "off"].includes(raw.trim().toLowerCase());
+}
+
+const POLICY = {
+  recallLimit: Math.max(1, Math.min(5, Math.floor(envNumber("AGENTMEMORY_PI_RECALL_LIMIT", 3)))),
+  recallMinScore: envNumber("AGENTMEMORY_PI_RECALL_MIN_SCORE", 0.01),
+  autoCapture: envBool("AGENTMEMORY_PI_AUTO_CAPTURE", true),
+  skipGeneric: envBool("AGENTMEMORY_PI_SKIP_GENERIC", true),
+  projectScope: envBool("AGENTMEMORY_PI_PROJECT_SCOPE", true),
+  requestTimeoutMs: Math.floor(envNumber("AGENTMEMORY_PI_REQUEST_TIMEOUT_MS", 3000)),
+  metrics: envBool("AGENTMEMORY_PI_METRICS", true),
+};
+
+type EndpointMetrics = { attempts: number; successes: number; failures: number; latencyMs: number[] };
+type AgentMemoryMetrics = {
+  startedAt: string;
+  smartSearch: EndpointMetrics;
+  remember: EndpointMetrics;
+  observe: EndpointMetrics;
+  health: EndpointMetrics;
+  other: EndpointMetrics;
+  recalledItems: number;
+  injectedItems: number;
+  filteredItems: number;
+  autoCapturesConsidered: number;
+  autoCapturesSkipped: number;
+  autoCapturesSaved: number;
+};
+
+function emptyEndpointMetrics(): EndpointMetrics {
+  return { attempts: 0, successes: 0, failures: 0, latencyMs: [] };
+}
+
+function createMetrics(): AgentMemoryMetrics {
+  return {
+    startedAt: new Date().toISOString(),
+    smartSearch: emptyEndpointMetrics(),
+    remember: emptyEndpointMetrics(),
+    observe: emptyEndpointMetrics(),
+    health: emptyEndpointMetrics(),
+    other: emptyEndpointMetrics(),
+    recalledItems: 0,
+    injectedItems: 0,
+    filteredItems: 0,
+    autoCapturesConsidered: 0,
+    autoCapturesSkipped: 0,
+    autoCapturesSaved: 0,
+  };
+}
+
+function metricBucket(metrics: AgentMemoryMetrics, pathname: string): EndpointMetrics {
+  if (pathname === "smart-search") return metrics.smartSearch;
+  if (pathname === "remember") return metrics.remember;
+  if (pathname === "observe") return metrics.observe;
+  if (pathname === "health") return metrics.health;
+  return metrics.other;
+}
+
+function recordEndpointMetric(metrics: AgentMemoryMetrics, pathname: string, success: boolean, latencyMs: number) {
+  if (!POLICY.metrics) return;
+  const bucket = metricBucket(metrics, pathname);
+  bucket.attempts += 1;
+  if (success) bucket.successes += 1;
+  else bucket.failures += 1;
+  bucket.latencyMs.push(Math.round(latencyMs));
+  if (bucket.latencyMs.length > 200) bucket.latencyMs.splice(0, bucket.latencyMs.length - 200);
+}
+
+function percentile(values: number[], p: number): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  return sorted[idx];
+}
+
+function formatEndpointMetrics(label: string, metrics: EndpointMetrics): string {
+  const successRate = metrics.attempts ? `${Math.round((metrics.successes / metrics.attempts) * 100)}%` : "n/a";
+  return `- ${label}: attempts=${metrics.attempts} success=${metrics.successes} failure=${metrics.failures} successRate=${successRate} p50=${percentile(metrics.latencyMs, 50)}ms p95=${percentile(metrics.latencyMs, 95)}ms`;
+}
+
+function formatMetrics(metrics: AgentMemoryMetrics): string {
+  return [
+    `agentmemory Pi metrics since ${metrics.startedAt}`,
+    formatEndpointMetrics("smart-search", metrics.smartSearch),
+    formatEndpointMetrics("remember", metrics.remember),
+    formatEndpointMetrics("observe", metrics.observe),
+    formatEndpointMetrics("health", metrics.health),
+    formatEndpointMetrics("other", metrics.other),
+    `- recall: recalled=${metrics.recalledItems} injected=${metrics.injectedItems} filtered=${metrics.filteredItems}`,
+    `- auto-capture: considered=${metrics.autoCapturesConsidered} saved=${metrics.autoCapturesSaved} skipped=${metrics.autoCapturesSkipped}`,
+    `- policy: recallLimit=${POLICY.recallLimit} recallMinScore=${POLICY.recallMinScore} autoCapture=${POLICY.autoCapture} projectScope=${POLICY.projectScope} timeoutMs=${POLICY.requestTimeoutMs}`,
+  ].join("\n");
+}
+
 const guardPlaintextBearerAuth = createPlaintextBearerAuthGuard();
 const TOOL_GUIDANCE = [
   "agentmemory is available for cross-session memory.",
@@ -219,16 +324,21 @@ async function callAgentMemory<T>(
   if (options?.body !== undefined) headers["Content-Type"] = "application/json";
   if (secret) headers.Authorization = `Bearer ${secret}`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), POLICY.requestTimeoutMs);
   try {
     const response = await fetch(url, {
       method,
       headers,
       body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
     });
     if (!response.ok) return null;
     return (await response.json()) as T;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -243,9 +353,25 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   let currentProject = process.cwd();
   let lastPrompt = "";
   let lastHealthOk = false;
+  const metrics = createMetrics();
+
+  async function trackedCall<T>(
+    pathname: string,
+    options?: {
+      method?: HttpMethod;
+      body?: unknown;
+      query?: Record<string, string | number | boolean | undefined>;
+      baseUrl?: string;
+    },
+  ): Promise<T | null> {
+    const started = Date.now();
+    const result = await callAgentMemory<T>(pathname, options);
+    recordEndpointMetric(metrics, pathname, result !== null, Date.now() - started);
+    return result;
+  }
 
   async function getHealth() {
-    return await callAgentMemory<HealthResponse>("health", { method: "GET" });
+    return await trackedCall<HealthResponse>("health", { method: "GET" });
   }
 
   async function refreshStatus(ctx: { ui: { setStatus: (key: string, text: string) => void } }) {
@@ -266,6 +392,13 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
         `agentmemory ${health.status || health.health?.status || "unknown"}${health.version ? ` v${health.version}` : ""}`,
         "info",
       );
+    },
+  });
+
+  pi.registerCommand("agentmemory-metrics", {
+    description: "Show Pi-side agentmemory integration metrics",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(formatMetrics(metrics), "info");
     },
   });
 
@@ -303,7 +436,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 10, default: 5, description: "Maximum results" })),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<{ results?: SmartSearchResult[] }>("smart-search", {
+      const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
         body: { query: params.query, limit: params.limit ?? 5 },
       });
       const results = result?.results || [];
@@ -328,7 +461,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       ),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<Record<string, unknown>>("remember", {
+      const result = await trackedCall<Record<string, unknown>>("remember", {
         body: { content: params.content, type: params.type || "fact", project: currentProject },
       });
       if (!result) {
@@ -356,7 +489,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     async execute(_toolCallId, params) {
       const limit = params.limit ?? 10;
       if (params.sessionId) {
-        const result = await callAgentMemory<{ observations?: AgentMemoryObservation[] }>("observations", {
+        const result = await trackedCall<{ observations?: AgentMemoryObservation[] }>("observations", {
           method: "GET",
           query: { sessionId: params.sessionId },
         });
@@ -366,7 +499,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
           details: { sessionId: params.sessionId, observations },
         };
       }
-      const result = await callAgentMemory<{ sessions?: AgentMemorySession[] }>("sessions", { method: "GET" });
+      const result = await trackedCall<{ sessions?: AgentMemorySession[] }>("sessions", { method: "GET" });
       const sessions = result?.sessions || [];
       return {
         content: [{ type: "text", text: formatSessions(sessions, limit, params.project) }],
@@ -384,7 +517,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       project: Type.Optional(Type.String({ description: "Project path filter; defaults to current cwd" })),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<{ context?: string }>("file-context", {
+      const result = await trackedCall<{ context?: string }>("file-context", {
         body: { files: splitCsv(params.files), sessionId, project: params.project || currentProject },
       });
       const context = result?.context?.trim() || "No prior file context found for those files.";
@@ -406,7 +539,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       after: Type.Optional(Type.Integer({ minimum: 0, maximum: 20, default: 5, description: "Observations after anchor" })),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<{ entries?: Array<{ observation?: AgentMemoryObservation; sessionId?: string; relativePosition?: number }> }>("timeline", {
+      const result = await trackedCall<{ entries?: Array<{ observation?: AgentMemoryObservation; sessionId?: string; relativePosition?: number }> }>("timeline", {
         body: { anchor: params.anchor, project: params.project || currentProject, before: params.before ?? 5, after: params.after ?? 5 },
       });
       const entries = result?.entries || [];
@@ -426,7 +559,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params) {
       const project = params.project || currentProject;
-      const result = await callAgentMemory<Record<string, unknown>>("profile", {
+      const result = await trackedCall<Record<string, unknown>>("profile", {
         method: "GET",
         query: { project },
       });
@@ -448,7 +581,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       minConfidence: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: "Minimum confidence" })),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<{ lessons?: AgentMemoryLesson[] }>("lessons/search", {
+      const result = await trackedCall<{ lessons?: AgentMemoryLesson[] }>("lessons/search", {
         body: { query: params.query, project: params.project || currentProject, limit: params.limit ?? 5, minConfidence: params.minConfidence },
       });
       const lessons = result?.lessons || [];
@@ -467,7 +600,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       id: Type.String({ description: "Memory ID or observation ID to verify" }),
     }),
     async execute(_toolCallId, params) {
-      const result = await callAgentMemory<Record<string, unknown>>("verify", {
+      const result = await trackedCall<Record<string, unknown>>("verify", {
         body: { id: params.id },
       });
       return {
@@ -486,7 +619,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
 
   pi.on("session_shutdown", async (event) => {
     if (event.reason === "reload" || !sessionId) return;
-    await callAgentMemory("session/end", {
+    await trackedCall("session/end", {
       body: { sessionId },
     });
   });
@@ -496,7 +629,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     lastPrompt = event.prompt?.trim() || "";
     if (!lastPrompt) return;
 
-    const result = await callAgentMemory<{ results?: SmartSearchResult[] }>("smart-search", {
+    const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
       body: { query: lastPrompt, limit: 5 },
     });
     const results = result?.results || [];
@@ -517,7 +650,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     if (!lastHealthOk || !lastPrompt) return;
     const assistantText = getLastAssistantText(event.messages as unknown[]);
     if (!assistantText) return;
-    void callAgentMemory("observe", {
+    void trackedCall("observe", {
       body: {
         hookType: "post_tool_use",
         sessionId,
