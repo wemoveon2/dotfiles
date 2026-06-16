@@ -1,0 +1,7 @@
+{
+  "name": "pi-credential-index-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Read-only MCP server that reports configured local integration credential locations without exposing secrets"
+}
