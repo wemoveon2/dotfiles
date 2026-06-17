@@ -1,0 +1,7 @@
+{
+  "name": "pi-atlassian-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Local read-only Jira MCP server for Pi using ~/.pi/agent/confluence.json at runtime"
+}

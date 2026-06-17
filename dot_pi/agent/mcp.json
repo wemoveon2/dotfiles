@@ -20,6 +20,11 @@
       "transport": "stdio",
       "command": "/Users/alanyu/.pi/agent/mcp-credential-index/server.js",
       "lifecycle": "eager"
+    },
+    "atlassian": {
+      "transport": "stdio",
+      "command": "/Users/alanyu/.pi/agent/mcp-atlassian/server.js",
+      "lifecycle": "eager"
     }
   }
 }
