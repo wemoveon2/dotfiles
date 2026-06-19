@@ -109,6 +109,23 @@ type AgentMemoryMetrics = {
   autoCapturesConsidered: number;
   autoCapturesSkipped: number;
   autoCapturesSaved: number;
+  recallShadowSearches: number;
+  recallShadowHits: number;
+};
+
+type RecallMetricItem = { title: string; type: string; score?: number };
+type RecallMetricSample = {
+  timestamp: string;
+  sessionId: string;
+  project: string;
+  source: string;
+  queryPreview: string;
+  raw: number;
+  kept: number;
+  filtered: number;
+  keptItems: RecallMetricItem[];
+  filteredItems: RecallMetricItem[];
+  shadow?: { raw: number; kept: number; filtered: number; keptItems: RecallMetricItem[] };
 };
 
 type AutoCaptureMetricSample = {
@@ -128,6 +145,7 @@ type PersistedSessionMetrics = {
   endedAt: string;
   reason: string;
   metrics: AgentMemoryMetrics;
+  recallSamples: RecallMetricSample[];
   autoCaptureSamples: AutoCaptureMetricSample[];
 };
 
@@ -156,6 +174,8 @@ function createMetrics(): AgentMemoryMetrics {
     autoCapturesConsidered: 0,
     autoCapturesSkipped: 0,
     autoCapturesSaved: 0,
+    recallShadowSearches: 0,
+    recallShadowHits: 0,
   };
 }
 
@@ -197,7 +217,7 @@ function formatMetrics(metrics: AgentMemoryMetrics, heading = `agentmemory Pi me
     formatEndpointMetrics("observe", metrics.observe),
     formatEndpointMetrics("health", metrics.health),
     formatEndpointMetrics("other", metrics.other),
-    `- recall: recalled=${metrics.recalledItems} injected=${metrics.injectedItems} filtered=${metrics.filteredItems}`,
+    `- recall: recalled=${metrics.recalledItems} injected=${metrics.injectedItems} filtered=${metrics.filteredItems} shadowSearches=${metrics.recallShadowSearches} shadowHits=${metrics.recallShadowHits}`,
     `- auto-capture: considered=${metrics.autoCapturesConsidered} saved=${metrics.autoCapturesSaved} skipped=${metrics.autoCapturesSkipped}`,
     `- policy: recallLimit=${POLICY.recallLimit} recallMinScore=${POLICY.recallMinScore} autoCapture=${POLICY.autoCapture} projectScope=${POLICY.projectScope} timeoutMs=${POLICY.requestTimeoutMs} metricsPath=${POLICY.metricsPath}`,
   ].join("\n");
@@ -238,6 +258,8 @@ function mergeMetrics(target: AgentMemoryMetrics, source: AgentMemoryMetrics) {
   target.autoCapturesConsidered += source.autoCapturesConsidered || 0;
   target.autoCapturesSkipped += source.autoCapturesSkipped || 0;
   target.autoCapturesSaved += source.autoCapturesSaved || 0;
+  target.recallShadowSearches += source.recallShadowSearches || 0;
+  target.recallShadowHits += source.recallShadowHits || 0;
 }
 
 function emptyPersistedMetrics(): PersistedMetricsFile {
@@ -276,12 +298,44 @@ async function persistSessionMetrics(entry: PersistedSessionMetrics): Promise<vo
 }
 
 function formatPersistedMetricsSummary(persisted: PersistedMetricsFile): string {
-  const recent = persisted.sessions.slice(-5).map((s) => `  - ${s.endedAt} ${s.reason} ${clip(s.project, 80)} recalled=${s.metrics.recalledItems} injected=${s.metrics.injectedItems} saved=${s.metrics.autoCapturesSaved} skipped=${s.metrics.autoCapturesSkipped}`);
+  const recent = persisted.sessions.slice(-5).map((s) => `  - ${s.endedAt} ${s.reason} ${clip(s.project, 80)} recalled=${s.metrics.recalledItems} injected=${s.metrics.injectedItems} shadowHits=${s.metrics.recallShadowHits || 0} saved=${s.metrics.autoCapturesSaved} skipped=${s.metrics.autoCapturesSkipped}`);
   return [
     `persisted metrics: updated=${persisted.updatedAt} sessions=${persisted.sessions.length}`,
     formatMetrics(persisted.totals, "persisted totals"),
     recent.length ? ["recent sessions:", ...recent].join("\n") : "recent sessions: none",
   ].join("\n");
+}
+
+function recallMetricItem(result: SmartSearchResult): RecallMetricItem {
+  const score = getSearchScore(result);
+  return {
+    title: clip(getSearchTitle(result) || "untitled", 120),
+    type: getSearchType(result),
+    ...(typeof score === "number" ? { score: Number(score.toFixed(4)) } : {}),
+  };
+}
+
+function formatRecallAudit(persisted: PersistedMetricsFile): string {
+  const samples = persisted.sessions.flatMap((session) => (session.recallSamples || []).map((sample) => ({ session, sample })));
+  const recent = samples.slice(-12);
+  const noKept = samples.filter(({ sample }) => sample.kept === 0).length;
+  const shadowHits = samples.filter(({ sample }) => (sample.shadow?.kept || 0) > 0).length;
+  const lines = [
+    `recall audit: samples=${samples.length} noKept=${noKept} shadowHits=${shadowHits}`,
+    `totals: recalled=${persisted.totals.recalledItems} injected=${persisted.totals.injectedItems} filtered=${persisted.totals.filteredItems} shadowSearches=${persisted.totals.recallShadowSearches || 0} shadowHits=${persisted.totals.recallShadowHits || 0}`,
+  ];
+  for (const { session, sample } of recent) {
+    lines.push(`- ${sample.timestamp} ${sample.source} project=${clip(session.project, 50)} raw=${sample.raw} kept=${sample.kept} filtered=${sample.filtered}${sample.shadow ? ` shadowKept=${sample.shadow.kept}` : ""} query=${sample.queryPreview}`);
+    for (const item of sample.keptItems.slice(0, 2)) {
+      lines.push(`    kept: ${item.title} (${item.type})${typeof item.score === "number" ? ` score=${item.score}` : ""}`);
+    }
+    if (!sample.kept && sample.shadow?.keptItems?.length) {
+      for (const item of sample.shadow.keptItems.slice(0, 2)) {
+        lines.push(`    shadow: ${item.title} (${item.type})${typeof item.score === "number" ? ` score=${item.score}` : ""}`);
+      }
+    }
+  }
+  return lines.join("\n");
 }
 
 const guardPlaintextBearerAuth = createPlaintextBearerAuthGuard();
@@ -529,6 +583,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   let lastHealthOk = false;
   let sessionMetricsPersisted = false;
   const metrics = createMetrics();
+  const recallSamples: RecallMetricSample[] = [];
   const autoCaptureSamples: AutoCaptureMetricSample[] = [];
 
   async function trackedCall<T>(
@@ -553,19 +608,46 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   async function searchMemory(
     query: string,
     limit: number,
-    options?: { includeLessons?: boolean; source?: string; project?: string },
+    options?: { includeLessons?: boolean; source?: string; project?: string; unscoped?: boolean },
   ): Promise<SmartSearchResult[]> {
     const result = await trackedCall<{ results?: SmartSearchResult[] }>("smart-search", {
       body: {
         query,
         limit,
-        ...projectPayload(options?.project || currentProject),
+        ...(options?.unscoped ? {} : projectPayload(options?.project || currentProject)),
         sessionId,
         ...(options?.includeLessons !== undefined ? { includeLessons: options.includeLessons } : {}),
         ...(options?.source ? { source: options.source } : {}),
       },
     });
     return result?.results || [];
+  }
+
+  function recordRecallSample(source: string, query: string, rawResults: SmartSearchResult[], kept: SmartSearchResult[], filtered: SmartSearchResult[]): RecallMetricSample {
+    const sample: RecallMetricSample = {
+      timestamp: new Date().toISOString(),
+      sessionId,
+      project: currentProject,
+      source,
+      queryPreview: clip(query, 180),
+      raw: rawResults.length,
+      kept: kept.length,
+      filtered: filtered.length,
+      keptItems: kept.slice(0, 5).map(recallMetricItem),
+      filteredItems: filtered.slice(0, 5).map(recallMetricItem),
+    };
+    recallSamples.push(sample);
+    if (recallSamples.length > 200) recallSamples.splice(0, recallSamples.length - 200);
+    return sample;
+  }
+
+  async function runRecallShadowIfNeeded(sample: RecallMetricSample, query: string) {
+    if (!POLICY.projectScope || sample.kept > 0) return;
+    metrics.recallShadowSearches += 1;
+    const rawShadow = await searchMemory(query, POLICY.recallLimit * 3, { includeLessons: true, source: `${sample.source}-shadow-unscoped`, unscoped: true });
+    const { kept, filtered } = filterRecallResults(rawShadow, POLICY.recallLimit);
+    if (kept.length > 0) metrics.recallShadowHits += 1;
+    sample.shadow = { raw: rawShadow.length, kept: kept.length, filtered: filtered.length, keptItems: kept.slice(0, 5).map(recallMetricItem) };
   }
 
   async function getHealth() {
@@ -611,15 +693,26 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
       }
       const rawResults = await searchMemory(query, POLICY.recallLimit * 3, { includeLessons: true, source: "pi-context-preview" });
       const { kept, filtered } = filterRecallResults(rawResults, POLICY.recallLimit);
+      const sample = recordRecallSample("pi-context-preview", query, rawResults, kept, filtered);
+      await runRecallShadowIfNeeded(sample, query);
       metrics.recalledItems += rawResults.length;
       metrics.filteredItems += filtered.length;
+      const shadowLine = sample.shadow ? ` shadowKept=${sample.shadow.kept}` : "";
       const text = [
         `agentmemory recall preview for: ${clip(query, 160)}`,
-        `project=${POLICY.projectScope ? currentProject : "all"} kept=${kept.length} filtered=${filtered.length}`,
+        `project=${POLICY.projectScope ? currentProject : "all"} kept=${kept.length} filtered=${filtered.length}${shadowLine}`,
         "",
         formatSearchResults(kept),
-      ].join("\n");
-      ctx.ui.notify(clip(text, 1800), "info");
+        !kept.length && sample.shadow?.keptItems.length ? `\nShadow unscoped candidates (not injected):\n${sample.shadow.keptItems.slice(0, 3).map((i) => `- ${i.title} (${i.type})${typeof i.score === "number" ? ` [score=${i.score}]` : ""}`).join("\n")}` : "",
+      ].filter(Boolean).join("\n");
+      ctx.ui.notify(clip(text, 2200), "info");
+    },
+  });
+
+  pi.registerCommand("agentmemory-recall-audit", {
+    description: "Show persisted agentmemory recall samples and shadow-search checks",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(clip(formatRecallAudit(await readPersistedMetrics()), 3500), "info");
     },
   });
 
@@ -847,6 +940,7 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
         endedAt: new Date().toISOString(),
         reason: event.reason,
         metrics: cloneMetrics(metrics),
+        recallSamples: recallSamples.slice(-100),
         autoCaptureSamples: autoCaptureSamples.slice(-50),
       });
     }
@@ -863,6 +957,8 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
 
     const rawResults = await searchMemory(lastPrompt, POLICY.recallLimit * 3, { includeLessons: true, source: "pi-before-agent-start" });
     const { kept: results, filtered } = filterRecallResults(rawResults, POLICY.recallLimit);
+    const sample = recordRecallSample("pi-before-agent-start", lastPrompt, rawResults, results, filtered);
+    void runRecallShadowIfNeeded(sample, lastPrompt);
     metrics.recalledItems += rawResults.length;
     metrics.injectedItems += results.length;
     metrics.filteredItems += filtered.length;
