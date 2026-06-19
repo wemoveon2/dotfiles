@@ -13,3 +13,7 @@
 	version = 2
 [credential]
 	helper = osxkeychain
+[alias]
+	co = checkout
+	nb = "!f(){ git checkout -b \"users/$(whoami)/$1\"; };f"
+	up = "!f() { git fetch origin main && git rebase origin/main; }; f"
