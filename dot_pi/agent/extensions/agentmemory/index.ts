@@ -2,6 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import path from "node:path";
 import crypto from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createPlaintextBearerAuthGuard } from "./security.ts";
 
 type TextBlock = { type?: string; text?: string };
@@ -91,6 +92,7 @@ const POLICY = {
   projectScope: envBool("AGENTMEMORY_PI_PROJECT_SCOPE", true),
   requestTimeoutMs: Math.floor(envNumber("AGENTMEMORY_PI_REQUEST_TIMEOUT_MS", 3000)),
   metrics: envBool("AGENTMEMORY_PI_METRICS", true),
+  metricsPath: process.env.AGENTMEMORY_PI_METRICS_PATH || path.join(process.env.HOME || ".", ".pi", "agent", "agentmemory-stats.json"),
 };
 
 type EndpointMetrics = { attempts: number; successes: number; failures: number; latencyMs: number[] };
@@ -107,6 +109,33 @@ type AgentMemoryMetrics = {
   autoCapturesConsidered: number;
   autoCapturesSkipped: number;
   autoCapturesSaved: number;
+};
+
+type AutoCaptureMetricSample = {
+  timestamp: string;
+  sessionId: string;
+  project: string;
+  promptPreview: string;
+  responseChars: number;
+  capture: boolean;
+  reason: string;
+};
+
+type PersistedSessionMetrics = {
+  sessionId: string;
+  project: string;
+  startedAt: string;
+  endedAt: string;
+  reason: string;
+  metrics: AgentMemoryMetrics;
+  autoCaptureSamples: AutoCaptureMetricSample[];
+};
+
+type PersistedMetricsFile = {
+  version: 1;
+  updatedAt: string;
+  totals: AgentMemoryMetrics;
+  sessions: PersistedSessionMetrics[];
 };
 
 function emptyEndpointMetrics(): EndpointMetrics {
@@ -160,9 +189,9 @@ function formatEndpointMetrics(label: string, metrics: EndpointMetrics): string 
   return `- ${label}: attempts=${metrics.attempts} success=${metrics.successes} failure=${metrics.failures} successRate=${successRate} p50=${percentile(metrics.latencyMs, 50)}ms p95=${percentile(metrics.latencyMs, 95)}ms`;
 }
 
-function formatMetrics(metrics: AgentMemoryMetrics): string {
+function formatMetrics(metrics: AgentMemoryMetrics, heading = `agentmemory Pi metrics since ${metrics.startedAt}`): string {
   return [
-    `agentmemory Pi metrics since ${metrics.startedAt}`,
+    heading,
     formatEndpointMetrics("smart-search", metrics.smartSearch),
     formatEndpointMetrics("remember", metrics.remember),
     formatEndpointMetrics("observe", metrics.observe),
@@ -170,7 +199,88 @@ function formatMetrics(metrics: AgentMemoryMetrics): string {
     formatEndpointMetrics("other", metrics.other),
     `- recall: recalled=${metrics.recalledItems} injected=${metrics.injectedItems} filtered=${metrics.filteredItems}`,
     `- auto-capture: considered=${metrics.autoCapturesConsidered} saved=${metrics.autoCapturesSaved} skipped=${metrics.autoCapturesSkipped}`,
-    `- policy: recallLimit=${POLICY.recallLimit} recallMinScore=${POLICY.recallMinScore} autoCapture=${POLICY.autoCapture} projectScope=${POLICY.projectScope} timeoutMs=${POLICY.requestTimeoutMs}`,
+    `- policy: recallLimit=${POLICY.recallLimit} recallMinScore=${POLICY.recallMinScore} autoCapture=${POLICY.autoCapture} projectScope=${POLICY.projectScope} timeoutMs=${POLICY.requestTimeoutMs} metricsPath=${POLICY.metricsPath}`,
+  ].join("\n");
+}
+
+function cloneEndpointMetrics(value: EndpointMetrics): EndpointMetrics {
+  return { ...value, latencyMs: [...value.latencyMs] };
+}
+
+function cloneMetrics(value: AgentMemoryMetrics): AgentMemoryMetrics {
+  return {
+    ...value,
+    smartSearch: cloneEndpointMetrics(value.smartSearch),
+    remember: cloneEndpointMetrics(value.remember),
+    observe: cloneEndpointMetrics(value.observe),
+    health: cloneEndpointMetrics(value.health),
+    other: cloneEndpointMetrics(value.other),
+  };
+}
+
+function mergeEndpointMetrics(target: EndpointMetrics, source: EndpointMetrics) {
+  target.attempts += source.attempts || 0;
+  target.successes += source.successes || 0;
+  target.failures += source.failures || 0;
+  target.latencyMs.push(...(source.latencyMs || []));
+  if (target.latencyMs.length > 500) target.latencyMs.splice(0, target.latencyMs.length - 500);
+}
+
+function mergeMetrics(target: AgentMemoryMetrics, source: AgentMemoryMetrics) {
+  mergeEndpointMetrics(target.smartSearch, source.smartSearch || emptyEndpointMetrics());
+  mergeEndpointMetrics(target.remember, source.remember || emptyEndpointMetrics());
+  mergeEndpointMetrics(target.observe, source.observe || emptyEndpointMetrics());
+  mergeEndpointMetrics(target.health, source.health || emptyEndpointMetrics());
+  mergeEndpointMetrics(target.other, source.other || emptyEndpointMetrics());
+  target.recalledItems += source.recalledItems || 0;
+  target.injectedItems += source.injectedItems || 0;
+  target.filteredItems += source.filteredItems || 0;
+  target.autoCapturesConsidered += source.autoCapturesConsidered || 0;
+  target.autoCapturesSkipped += source.autoCapturesSkipped || 0;
+  target.autoCapturesSaved += source.autoCapturesSaved || 0;
+}
+
+function emptyPersistedMetrics(): PersistedMetricsFile {
+  return { version: 1, updatedAt: new Date().toISOString(), totals: createMetrics(), sessions: [] };
+}
+
+function normalizePersistedMetrics(raw: unknown): PersistedMetricsFile {
+  if (!raw || typeof raw !== "object") return emptyPersistedMetrics();
+  const data = raw as Partial<PersistedMetricsFile>;
+  return {
+    version: 1,
+    updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+    totals: data.totals ? { ...createMetrics(), ...data.totals } as AgentMemoryMetrics : createMetrics(),
+    sessions: Array.isArray(data.sessions) ? data.sessions.slice(-100) as PersistedSessionMetrics[] : [],
+  };
+}
+
+async function readPersistedMetrics(): Promise<PersistedMetricsFile> {
+  try {
+    return normalizePersistedMetrics(JSON.parse(await readFile(POLICY.metricsPath, "utf8")));
+  } catch {
+    return emptyPersistedMetrics();
+  }
+}
+
+async function persistSessionMetrics(entry: PersistedSessionMetrics): Promise<void> {
+  if (!POLICY.metrics) return;
+  const persisted = await readPersistedMetrics();
+  persisted.updatedAt = new Date().toISOString();
+  persisted.sessions.push(entry);
+  if (persisted.sessions.length > 100) persisted.sessions.splice(0, persisted.sessions.length - 100);
+  persisted.totals = persisted.totals || createMetrics();
+  mergeMetrics(persisted.totals, entry.metrics);
+  await mkdir(path.dirname(POLICY.metricsPath), { recursive: true });
+  await writeFile(POLICY.metricsPath, `${JSON.stringify(persisted, null, 2)}\n`, "utf8");
+}
+
+function formatPersistedMetricsSummary(persisted: PersistedMetricsFile): string {
+  const recent = persisted.sessions.slice(-5).map((s) => `  - ${s.endedAt} ${s.reason} ${clip(s.project, 80)} recalled=${s.metrics.recalledItems} injected=${s.metrics.injectedItems} saved=${s.metrics.autoCapturesSaved} skipped=${s.metrics.autoCapturesSkipped}`);
+  return [
+    `persisted metrics: updated=${persisted.updatedAt} sessions=${persisted.sessions.length}`,
+    formatMetrics(persisted.totals, "persisted totals"),
+    recent.length ? ["recent sessions:", ...recent].join("\n") : "recent sessions: none",
   ].join("\n");
 }
 
@@ -417,7 +527,9 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   let currentProject = process.cwd();
   let lastPrompt = "";
   let lastHealthOk = false;
+  let sessionMetricsPersisted = false;
   const metrics = createMetrics();
+  const autoCaptureSamples: AutoCaptureMetricSample[] = [];
 
   async function trackedCall<T>(
     pathname: string,
@@ -484,7 +596,8 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
   pi.registerCommand("agentmemory-metrics", {
     description: "Show Pi-side agentmemory integration metrics",
     handler: async (_args, ctx) => {
-      ctx.ui.notify(formatMetrics(metrics), "info");
+      const persisted = await readPersistedMetrics();
+      ctx.ui.notify(clip([formatMetrics(metrics, "current session metrics"), "", formatPersistedMetricsSummary(persisted)].join("\n"), 3500), "info");
     },
   });
 
@@ -720,10 +833,23 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
     const sessionFile = ctx.sessionManager.getSessionFile();
     sessionId = sessionFile ? path.basename(sessionFile).replace(/\.[^.]+$/, "") : `ephemeral-${crypto.randomUUID().slice(0, 8)}`;
     currentProject = ctx.cwd || process.cwd();
+    sessionMetricsPersisted = false;
     await refreshStatus(ctx);
   });
 
   pi.on("session_shutdown", async (event) => {
+    if (!sessionMetricsPersisted) {
+      sessionMetricsPersisted = true;
+      await persistSessionMetrics({
+        sessionId,
+        project: currentProject,
+        startedAt: metrics.startedAt,
+        endedAt: new Date().toISOString(),
+        reason: event.reason,
+        metrics: cloneMetrics(metrics),
+        autoCaptureSamples: autoCaptureSamples.slice(-50),
+      });
+    }
     if (event.reason === "reload" || !sessionId) return;
     await trackedCall("session/end", {
       body: { sessionId },
@@ -760,6 +886,16 @@ export default function agentmemoryExtension(pi: ExtensionAPI) {
 
     metrics.autoCapturesConsidered += 1;
     const decision = autoCaptureDecision(lastPrompt, assistantText);
+    autoCaptureSamples.push({
+      timestamp: new Date().toISOString(),
+      sessionId,
+      project: currentProject,
+      promptPreview: clip(lastPrompt, 160),
+      responseChars: assistantText.length,
+      capture: decision.capture,
+      reason: decision.reason,
+    });
+    if (autoCaptureSamples.length > 100) autoCaptureSamples.splice(0, autoCaptureSamples.length - 100);
     if (!decision.capture) {
       metrics.autoCapturesSkipped += 1;
       return;
