@@ -17,3 +17,11 @@
 	co = checkout
 	nb = "!f(){ git checkout -b \"users/$(whoami)/$1\"; };f"
 	up = "!f() { git fetch origin main && git rebase origin/main; }; f"
+[fetch]
+	prune = true
+[diff]
+	algorithm = histogram
+[branch]
+	sort = -committerdate
+[tag]
+	sort = version:refname
